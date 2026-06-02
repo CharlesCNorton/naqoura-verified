@@ -844,6 +844,9 @@ Proof. repeat split; apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity. Qed.
 Theorem south_pole_israeli : decide south_pole = Israeli.
 Proof. vm_compute. reflexivity. Qed.
 
+Theorem north_pole_lebanese : decide north_pole = Lebanese.
+Proof. vm_compute. reflexivity. Qed.
+
 (* ===== The three historical claim lines and the agreement's resolution. ===== *)
 
 (* Israel's Line 1, anchored at its disputed seaward endpoint. *)
@@ -1288,6 +1291,7 @@ Extract Inductive bool => "bool" [ "true" "false" ].
 Extraction "naqoura.ml"
   decide clearance committed clearance_pos
   karish karish_north tanin qana_leb qana_isr point1_israel ras_naqoura
+  b1n b1s south_pole north_pole
   p1 p2 p3 p4.
 
 (******************************************************************************)

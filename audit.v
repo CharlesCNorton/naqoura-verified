@@ -76,6 +76,7 @@ Print Assumptions prospect_straddle_no_unilateral.
 Print Assumptions positive_side_is_south.
 Print Assumptions negative_side_is_north.
 Print Assumptions south_pole_israeli.
+Print Assumptions north_pole_lebanese.
 Print Assumptions nseg_norm_lb_bounds.
 Print Assumptions crossing_deposit_not_unilateral.
 Print Assumptions qana_prospect_crosses.

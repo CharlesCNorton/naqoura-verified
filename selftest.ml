@@ -29,6 +29,10 @@ let () =
   check "point1_israel" point1_israel "Lebanese";
   check "ras_naqoura"   ras_naqoura   "Indeterminate";
   check "p4 (on line)"  p4            "Indeterminate";
+  check "b1n"           b1n           "Lebanese";
+  check "b1s"           b1s           "Israeli";
+  check "south_pole"    south_pole    "Israeli";
+  check "north_pole"    north_pole    "Lebanese";
   if !failures = 0 then
     print_endline "all extracted verdicts match the Coq theorems."
   else begin

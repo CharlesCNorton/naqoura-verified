@@ -4,5 +4,5 @@
 4. Add Israel's points 34/35 and Lebanon's points 20-22, and verify P4 against Decree 6433 Point 23 in the primary UN-deposited list (a scanned Arabic annex).
 5. Confirm the p1-p4 degree-minute-second inputs against the primary UN MZN deposit rather than secondary compilations.
 6. Relate the agreed line to UNCLOS Articles 74/83 (equidistance and equity), beyond restating equitable_delimitation := annex_A; this needs coastal baseline points and an equidistance formalization.
-7. Reduce extraction trust; Coq's extraction is unverified and selftest.ml checks only eight points, so use a verified extraction toolchain (CertiCoq / MetaCoq) or broaden the test coverage.
+7. Reduce extraction trust further; the self-test now covers twelve theorem-backed points, but Coq's extraction itself is unverified, so a verified extraction toolchain (CertiCoq / MetaCoq) would be needed to close the gap fully (external infrastructure).
 8. Reduce the bridge's reliance on classical reals; its geometric theorems use excluded middle, functional extensionality, and the Dedekind-reals axioms, which the metric layer fundamentally requires.
