@@ -34,6 +34,7 @@
 From Stdlib Require Import QArith.
 From Stdlib Require Import Qabs.
 From Stdlib Require Import Lqa.
+From Stdlib Require Import Nsatz.
 From Stdlib Require Import Lia.
 From Stdlib Require Import List.
 From Stdlib Require Import Extraction.
@@ -486,6 +487,84 @@ Fixpoint west_chain (pts : list Vec) : Prop :=
 
 Lemma mbl_is_west_chain : west_chain [p1; p2; p3; p4].
 Proof. simpl; repeat split; vm_compute; reflexivity. Qed.
+
+(* On a shared meridian a point lies in two adjacent bands, and decide breaks
+   the tie by if-else order.  That choice is immaterial: both adjacent segment
+   normals are orthogonal to the shared point and (by mbl_monotone_west) have
+   negative z-component, so the two determinants are proportional with a
+   positive ratio and give the same verdict.  Hence decide is well-defined on
+   the seams.  sign_transfer is the generic sign fact; p2_prop / p3_prop are
+   the proportionality identities (the vz X term cancels), closed by nsatz. *)
+Lemma sign_transfer : forall a b c1 c2 : Q,
+  c1 < 0 -> c2 < 0 -> a * c2 == b * c1 -> (a ?= 0) = (b ?= 0).
+Proof.
+  intros a b c1 c2 H1 H2 Hab.
+  destruct (a ?= 0) eqn:Ea.
+  - apply Qeq_alt in Ea.
+    assert (Hb0 : b * c1 == 0) by (rewrite <- Hab, Ea; ring).
+    symmetry. apply Qeq_alt.
+    destruct (Qmult_integral b c1 Hb0) as [Hb | Hc].
+    + exact Hb.
+    + rewrite Hc in H1. exfalso. apply (Qlt_irrefl 0). exact H1.
+  - apply Qlt_alt in Ea. symmetry. apply Qlt_alt.
+    assert (Hac : a * c2 > 0) by nra.
+    assert (Hbc : b * c1 > 0) by (rewrite <- Hab; exact Hac).
+    destruct (Qlt_le_dec b 0) as [Hb|Hb]; [exact Hb|].
+    assert (b * c1 <= 0) by nra. lra.
+  - apply Qgt_alt in Ea. symmetry. apply Qgt_alt.
+    assert (Hac : a * c2 < 0) by nra.
+    assert (Hbc : b * c1 < 0) by (rewrite <- Hab; exact Hac).
+    destruct (Qlt_le_dec 0 b) as [Hb|Hb]; [exact Hb|].
+    assert (b * c1 >= 0) by nra. lra.
+Qed.
+
+Lemma p2_prop : forall X,
+  dot (meridian p2) X == 0 ->
+  dot nseg1 X * vz nseg2 == dot nseg2 X * vz nseg1.
+Proof.
+  intros X H. unfold dot, meridian, nseg1, nseg2, cross, p1, p2, p3 in *.
+  destruct X as [xx xy xz]; simpl in *. nsatz.
+Qed.
+
+Lemma p3_prop : forall X,
+  dot (meridian p3) X == 0 ->
+  dot nseg2 X * vz nseg3 == dot nseg3 X * vz nseg2.
+Proof.
+  intros X H. unfold dot, meridian, nseg2, nseg3, cross, p2, p3, p4 in *.
+  destruct X as [xx xy xz]; simpl in *. nsatz.
+Qed.
+
+Lemma verdict_agree_p2 : forall X,
+  dot (meridian p2) X == 0 -> verdict nseg1 X = verdict nseg2 X.
+Proof.
+  intros X H.
+  assert (Hc1 : vz nseg1 < 0) by (apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity).
+  assert (Hc2 : vz nseg2 < 0) by (apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity).
+  assert (Hp : dot nseg1 X * vz nseg2 == dot nseg2 X * vz nseg1) by (apply p2_prop; exact H).
+  unfold verdict.
+  rewrite (sign_transfer (dot nseg1 X) (dot nseg2 X) (vz nseg1) (vz nseg2) Hc1 Hc2 Hp).
+  reflexivity.
+Qed.
+
+Lemma verdict_agree_p3 : forall X,
+  dot (meridian p3) X == 0 -> verdict nseg2 X = verdict nseg3 X.
+Proof.
+  intros X H.
+  assert (Hc1 : vz nseg2 < 0) by (apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity).
+  assert (Hc2 : vz nseg3 < 0) by (apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity).
+  assert (Hp : dot nseg2 X * vz nseg3 == dot nseg3 X * vz nseg2) by (apply p3_prop; exact H).
+  unfold verdict.
+  rewrite (sign_transfer (dot nseg2 X) (dot nseg3 X) (vz nseg2) (vz nseg3) Hc1 Hc2 Hp).
+  reflexivity.
+Qed.
+
+(* The geofence is well-defined on the seams: at either shared meridian the
+   verdict is the same from both adjacent segments, so decide's band tie-break
+   does not affect the result. *)
+Theorem decide_seam_well_defined : forall X,
+  (dot (meridian p2) X == 0 -> verdict nseg1 X = verdict nseg2 X) /\
+  (dot (meridian p3) X == 0 -> verdict nseg2 X = verdict nseg3 X).
+Proof. intro X. split; [apply verdict_agree_p2 | apply verdict_agree_p3]. Qed.
 
 (* ===== Named offshore features and claim-line points. =====
    WGS84-derived rational unit vectors (within 1.6e-13 of the true unit

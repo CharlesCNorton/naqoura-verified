@@ -31,6 +31,7 @@ Print Assumptions bands_share_only_p2.
 Print Assumptions bands_share_only_p3.
 Print Assumptions bands_meet_on_shared.
 Print Assumptions mbl_is_west_chain.
+Print Assumptions decide_seam_well_defined.
 Print Assumptions decide_band1_indeterminate_iff.
 Print Assumptions decide_poly_total.
 Print Assumptions decide_poly_sound.

@@ -90,6 +90,10 @@ Geometry of the line (kernel):
   `bands_meet_on_shared` - adjacent bands meet only on a shared meridian, so the
   segments are interior-disjoint (the line is simple); the concrete facts are
   instances of the generic one.
+- `decide_seam_well_defined` - on either shared meridian the verdict is the same
+  from both adjacent segments (their determinants are proportional with a
+  positive ratio there), so the band tie-break in `decide` is immaterial and the
+  geofence is well-defined on the seams.
 - `decide_band1_indeterminate_iff` - within a band, Indeterminate holds exactly
   on the segment's great circle.
 - `decide_poly_total`, `decide_poly_sound`, `decide_poly_is_decide` - the
