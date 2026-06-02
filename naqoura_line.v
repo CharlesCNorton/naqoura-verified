@@ -204,6 +204,23 @@ Proof.
       * destruct H as [H|H]; discriminate.
 Qed.
 
+(* ----- A worked consequence: the Karish field is on the Israeli side. ----- *)
+
+(* The Karish gas field (Energean), reported at 33.2283 N, 34.2890 E, as a
+   rational unit vector within 1.0e-13 of the true WGS84 position (Wolfram). *)
+Definition karish : Vec :=
+  mkVec (1493827 # 2161469) (1319835 # 2800691) (1197819 # 2185895).
+
+(* Its longitude lies in the seaward P3-P4 band and it sits south of that
+   segment, so the geofence places it on the Israeli side -- decided purely by
+   rational computation, no axioms. *)
+Theorem karish_israeli : decide karish = Israeli.
+Proof. vm_compute. reflexivity. Qed.
+
+(* The deal therefore places Karish strictly off the boundary, clearance > 0. *)
+Theorem karish_off_line : 0 < clearance karish.
+Proof. apply decide_committed_clearance_pos. left. exact karish_israeli. Qed.
+
 (* ----- Extraction: the geofence as runnable OCaml. ----- *)
 
 Extraction Language OCaml.
