@@ -43,7 +43,10 @@ position `X` is on Lebanon's (north) side when `(A x B) . X < 0` and on Israel's
 (south) side when `(A x B) . X > 0`. Segment selection is by longitude band,
 itself an exact rational sign test against the meridian normals. Every
 classification is a finite exact rational computation, decided by `vm_compute`,
-and extracts to OCaml.
+and extracts to OCaml. The default kernel reads positions as directions on a
+sphere; the same machinery, fed the true WGS84 ECEF directions (the spherical
+direction with `z` scaled by `1 - e^2`), gives a native ellipsoidal geofence
+`decide_ellip` that agrees with it on every committed feature (see below).
 
 The only irrational data are the boundary and feature coordinates. These are
 converted from their published WGS84 geodetic positions to rational unit vectors
@@ -176,6 +179,24 @@ Robustness and rounding (kernel):
 - `nseg_norm_bounds` - tight rational upper bounds on the segment normals,
   linking the clearance to an angular (and hence kilometre) distance.
 
+WGS84 ellipsoid, native (kernel):
+
+- `ellip_det_identity` and the per-feature `*_ellip_sign` - the exact WGS84 ECEF
+  direction of a point is its spherical direction with `z` scaled by `1 - e^2`
+  (`zscale`); on the side determinant the `e^2` correction is exact (the higher
+  powers vanish), and for every committed feature the spherical and ellipsoidal
+  determinants share sign.
+- `decide_ellip`, `decide_ellip_total`, `decide_ellip_sound`,
+  `mbl_ellip_is_west_chain`, `ellipsoid_agrees_on_features` - feeding the generic
+  geofence the true ECEF directions yields a total, sound, exact-rational
+  decision procedure on the WGS84 ellipsoid (its boundary the central plane
+  section, the great ellipse), which returns the same verdict as the spherical
+  kernel on every committed feature. The longitude bands are unchanged because
+  `zscale` fixes `x` and `y`. The sole residual versus the treaty's geodesic
+  lines is the great-ellipse-versus-geodesic separation, on the order of tens of
+  metres: transcendental, not exactly rational, and far below every clearance.
+  `decide_ellip` is extracted and the self-test checks it against `decide`.
+
 Geometric soundness (bridge, classical reals):
 
 - `Q2R_dot`, `verdict_real_Israeli`, `verdict_real_Lebanese` - the rational
@@ -247,11 +268,18 @@ project-specific axioms and no admitted lemmas anywhere in the development.
 
 All coordinates are WGS84. Rational unit vectors are within `1.6e-13` of the true
 unit vector, and this is certified inside Coq to `1e-12` on the squared norm. The
-kernel models a sphere; `wolfram/derive.wl` recomputes each committed feature's
-side determinant on the full WGS84 ellipsoid and confirms it shares sign with the
-spherical determinant and differs by at most `6.5e-8`, which is below every
-committed feature's clearance (smallest, Qana, is `2.1e-6`). Hence
-`committed_robust_to_model_and_rounding` discharges the model+rounding envelope.
+spherical kernel and the native ellipsoidal `decide_ellip` agree on every
+committed feature, proved inside Coq (`ellipsoid_agrees_on_features`), so the
+spherical idealization flips no verdict; `wolfram/derive.wl` independently
+recomputes each feature's determinant on the full WGS84 ellipsoid and finds the
+spherical and ellipsoidal values differ by at most `6.5e-8`, below every
+clearance (smallest, Qana, is `2.1e-6`), and `committed_robust_to_model_and_rounding`
+discharges the combined model and rounding envelope. The one approximation that
+remains, in `decide_ellip` as in the kernel, is that a segment is the central
+plane section (great ellipse) rather than the ellipsoidal geodesic; the two
+separate by tens of metres over these segment lengths, far below the kilometre
+clearances, but the geodesic is transcendental and so outside exact rational
+arithmetic.
 
 Kilometre clearances of the named features to the boundary (Wolfram geodesy,
 matched in sign by the Coq verdicts):

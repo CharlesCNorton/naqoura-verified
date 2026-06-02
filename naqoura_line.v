@@ -1286,6 +1286,65 @@ Theorem qana_leb_ellip_sign :
   (det3 (zscale qana_leb) (zscale p2) (zscale p3) ?= 0) = (det3 qana_leb p2 p3 ?= 0).
 Proof. vm_compute. reflexivity. Qed.
 
+(* ----- A native WGS84-ellipsoidal geofence (exact rational, not bounded). -----
+   The exact ECEF direction of a deposited point is its spherical direction with
+   z scaled by 1-e^2, which is exactly zscale.  Feeding the generic polyline
+   geofence the true ECEF directions p1e..p4e replaces the spherical idealization
+   by the exact ellipsoidal model.  Two facts make this clean and total: the
+   longitude bands are unchanged, since zscale fixes x and y and the meridian
+   tests ignore z; and on the side determinant the e^2 correction is exact and
+   linear in the query (ellip_det_identity).  So decide_ellip is a total, sound,
+   exact rational decision procedure on the WGS84 ellipsoid, its boundary the
+   central plane section (great ellipse) through each pair of points.  The only
+   residual versus the treaty's geodesic lines is the great-ellipse-vs-geodesic
+   separation, on the order of tens of metres: transcendental, not exactly
+   rational, and far below every committed clearance. *)
+Definition p1e : Vec := zscale p1.
+Definition p2e : Vec := zscale p2.
+Definition p3e : Vec := zscale p3.
+Definition p4e : Vec := zscale p4.
+Definition decide_ellip (X : Vec) : Side := decide_poly [p1e; p2e; p3e; p4e] (zscale X).
+
+Theorem decide_ellip_total : forall X,
+  decide_ellip X = Israeli \/ decide_ellip X = Lebanese \/ decide_ellip X = Indeterminate.
+Proof. intro X. apply decide_poly_total. Qed.
+
+Theorem decide_ellip_sound : forall X,
+  decide_ellip X = Israeli \/ decide_ellip X = Lebanese ->
+  exists pe pw, in_band pw pe (zscale X) = true /\
+    ((decide_ellip X = Israeli /\ (dot (cross pe pw) (zscale X) ?= 0) = Gt) \/
+     (decide_ellip X = Lebanese /\ (dot (cross pe pw) (zscale X) ?= 0) = Lt)).
+Proof. intro X. apply decide_poly_sound. Qed.
+
+(* The ellipsoidal boundary is still a simple, monotone west-chain. *)
+Theorem mbl_ellip_is_west_chain : west_chain [p1e; p2e; p3e; p4e].
+Proof. simpl; repeat split; vm_compute; reflexivity. Qed.
+
+(* Native ellipsoidal verdicts for the committed features. *)
+Theorem karish_ellip_verdict       : decide_ellip karish        = Israeli.
+Proof. vm_compute. reflexivity. Qed.
+Theorem karish_north_ellip_verdict : decide_ellip karish_north  = Israeli.
+Proof. vm_compute. reflexivity. Qed.
+Theorem tanin_ellip_verdict        : decide_ellip tanin         = Israeli.
+Proof. vm_compute. reflexivity. Qed.
+Theorem point1_ellip_verdict       : decide_ellip point1_israel = Lebanese.
+Proof. vm_compute. reflexivity. Qed.
+Theorem qana_isr_ellip_verdict     : decide_ellip qana_isr      = Israeli.
+Proof. vm_compute. reflexivity. Qed.
+Theorem qana_leb_ellip_verdict     : decide_ellip qana_leb      = Lebanese.
+Proof. vm_compute. reflexivity. Qed.
+
+(* The exact ellipsoidal model and the spherical kernel return the SAME verdict
+   for every committed feature: the spherical idealization flips nothing. *)
+Theorem ellipsoid_agrees_on_features :
+  decide_ellip karish        = decide karish /\
+  decide_ellip karish_north  = decide karish_north /\
+  decide_ellip tanin         = decide tanin /\
+  decide_ellip point1_israel = decide point1_israel /\
+  decide_ellip qana_isr      = decide qana_isr /\
+  decide_ellip qana_leb      = decide qana_leb.
+Proof. repeat split; vm_compute; reflexivity. Qed.
+
 (* ===== Front-end: building a position for the geofence. =====
    A consumer converts a geodetic fix (degrees) to an ECEF unit vector and
    rounds each component to a rational (done outside Coq, where trigonometry
@@ -1431,7 +1490,7 @@ Definition clearance_pos (X : Vec) : bool :=
 Extraction Language OCaml.
 Extract Inductive bool => "bool" [ "true" "false" ].
 Extraction "naqoura.ml"
-  decide clearance committed clearance_pos
+  decide decide_ellip clearance committed clearance_pos
   karish karish_north tanin qana_leb qana_isr point1_israel ras_naqoura
   b1n b1s south_pole north_pole israel_point34 israel_point35
   p1 p2 p3 p4.

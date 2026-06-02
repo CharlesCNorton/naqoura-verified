@@ -109,3 +109,13 @@ Print Assumptions tanin_ellip_sign.
 Print Assumptions point1_ellip_sign.
 Print Assumptions qana_isr_ellip_sign.
 Print Assumptions qana_leb_ellip_sign.
+
+(* Native WGS84-ellipsoidal geofence: total, sound, simple, and agreeing with
+   the spherical kernel on every committed feature. *)
+Print Assumptions decide_ellip_total.
+Print Assumptions decide_ellip_sound.
+Print Assumptions mbl_ellip_is_west_chain.
+Print Assumptions karish_ellip_verdict.
+Print Assumptions point1_ellip_verdict.
+Print Assumptions qana_leb_ellip_verdict.
+Print Assumptions ellipsoid_agrees_on_features.
