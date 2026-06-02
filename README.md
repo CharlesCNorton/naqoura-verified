@@ -220,11 +220,20 @@ global context*. The geofence and clearance extract to runnable OCaml;
 independent reimplementation of the kernel over 50000 pseudo-random positions
 plus structured edge cases, all on identical exact rationals.
 
-The real-geometry bridge depends only on Coq's standard real-number axioms
-(`ClassicalDedekindReals.sig_forall_dec`, `sig_not_dec`, `functional_
-extensionality_dep`, `Classical_Prop.classic` - the assumptions behind the Coq
-`Reals` library); it introduces no project-specific axioms and no admitted
-lemmas. `audit_bridge.v` documents this footprint.
+The real-geometry bridge uses only Coq's standard real-number axioms, and
+`audit_bridge.v` stratifies them by where they are actually needed. The
+orientation-soundness theorems - the verdict is the sign of the real scalar
+triple product (`verdict_real_Israeli` / `verdict_real_Lebanese`), the
+Cauchy-Schwarz bound (`dot_circle_bound`), and the precise meaning of a
+committed verdict (`decide_Israeli_real_meaning` / `decide_Lebanese_real_meaning`)
+- depend on only `ClassicalDedekindReals.sig_forall_dec` and
+`functional_extensionality_dep`: no excluded middle, no `sig_not_dec`. Excluded
+middle (`Classical_Prop.classic`) and `sig_not_dec` enter only in the metric
+layer, the kilometre distance bounds that go through `acos` / `asin` / `sqrt`.
+So the operative claim - which side of the line a position lies on - rests on a
+strictly smaller axiom set than the distance figures. Neither layer adds a
+project-specific axiom or an admitted lemma; fully removing the classical reals
+would mean reproving the metric layer over a constructive-reals library.
 
 The coordinate-provenance layer (`provenance.v`) depends on those same
 classical-reals axioms together with Coq's primitive 63-bit integer arithmetic
