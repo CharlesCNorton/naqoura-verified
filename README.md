@@ -94,6 +94,10 @@ Geometry of the line (kernel):
   from both adjacent segments (their determinants are proportional with a
   positive ratio there), so the band tie-break in `decide` is immaterial and the
   geofence is well-defined on the seams.
+- `meridian_trans`, `decide_seaward_of_p4`, `decide_landward_of_p1` - the
+  meridian test is transitive within a hemisphere (a 2D Lagrange identity), so a
+  position seaward of P4 or landward of P1 lies in no band and is Indeterminate:
+  the commitment is confined to the agreed seaward span.
 - `decide_band1_indeterminate_iff` - within a band, Indeterminate holds exactly
   on the segment's great circle.
 - `decide_poly_total`, `decide_poly_sound`, `decide_poly_is_decide` - the
@@ -109,8 +113,14 @@ Features and lines (kernel):
   the Qana/Sidon prospect has committed points on both sides; the 31/1B well,
   drilled in Block 9, is Lebanese-side; and neither party's side contains the
   whole prospect, so a unilateral taking would cross the line (Section 2F).
-- `orientation_consistent` - on every segment the Israeli side is the positive
-  side and the Lebanese side the negative side.
+- `orientation_consistent`, `positive_side_is_south`, `negative_side_is_north` -
+  on every segment the Israeli side is the positive side and the Lebanese side
+  the negative side; the positive side contains the geographic south pole and
+  the negative side the north pole, grounding the orientation in geographic
+  south rather than sample witnesses.
+- `crossing_deposit_not_unilateral` - a deposit with committed points on both
+  sides cannot be taken wholly by either party (Section 2F in general form); the
+  Qana prospect is the instance.
 - `shared_line`, `supersession`, `mbl_between_line1_and_line29`,
   `endpoint_latitude_order` - the annexes are identical; Israel's Line 1 endpoint
   lies on the Lebanese side of the agreed line; the agreed line lies between
@@ -151,13 +161,20 @@ Geometric soundness (bridge, classical reals):
   correct sign of that segment's real triple product. It does not assert "X is
   in country Y's waters", only "X is south/north of that segment's great circle
   within the band".
-- `karish_min_distance_km` - the boundary lies at least `R_earth * (216/100000)`
-  ~ 13.7 km from the Karish field's unit position (Wolfram geodesy: 14.2 km).
+- `boundary_far_from_position`, `boundary_far_from_position_gen`, and the
+  per-feature `tanin_distance_km`, `karish_distance_km`, `karish_north_distance_km`,
+  `point1_distance_km`, `qana_isr_distance_km`, `qana_leb_distance_km` - every
+  point of a segment's great circle is at least `R_earth * arcsin(clearance/|n|)`
+  from the position; the per-feature bounds (Tanin ~35 km, Point 1 ~16, Karish
+  ~14, Karish North ~9, Qana ~5-7) apply to the features' WGS84 unit positions
+  directly (the non-unit generalization removes the idealization).
+- `ecef_unit_is_unit` - the geodetic-to-ECEF embedding, in Coq's own sin/cos,
+  produces unit vectors.
 
 ## Axiom status
 
 The rational kernel contains no axioms and no admitted lemmas. `audit.v` runs
-`Print Assumptions` over all 49 kernel theorems; each reports *Closed under the
+`Print Assumptions` over the kernel theorems; each reports *Closed under the
 global context*. The geofence and clearance extract to runnable OCaml, and
 `selftest.ml` checks that the extracted verdicts match the Coq theorems.
 

@@ -566,6 +566,162 @@ Theorem decide_seam_well_defined : forall X,
   (dot (meridian p3) X == 0 -> verdict nseg2 X = verdict nseg3 X).
 Proof. intro X. split; [apply verdict_agree_p2 | apply verdict_agree_p3]. Qed.
 
+(* ===== Longitude transitivity, and deferral outside the agreed span. =====
+   The 2D Lagrange identity (a x X)|b_h|^2 = (b_h . X_h)(a x b) + (b x X)(a_h . b_h)
+   makes the meridian sign-test transitive within a hemisphere (the horizontal
+   projections in a common half, true across the MBL's ~1.3 degree span).  Hence
+   a position seaward of P4 or landward of P1, in the relevant longitude
+   hemisphere, lies in no band and the geofence is Indeterminate there: the
+   commitment is confined to the agreed seaward span. *)
+Lemma meridian_trans : forall a b X,
+  0 < vx b * vx b + vy b * vy b ->
+  0 < vx a * vx b + vy a * vy b ->
+  0 < vx b * vx X + vy b * vy X ->
+  dot (meridian a) b < 0 -> dot (meridian b) X < 0 -> dot (meridian a) X < 0.
+Proof.
+  intros a b X Hbb Hab Hbx Habw Hbxw.
+  assert (Hid : dot (meridian a) X * (vx b * vx b + vy b * vy b)
+    == (vx b * vx X + vy b * vy X) * dot (meridian a) b
+      + dot (meridian b) X * (vx a * vx b + vy a * vy b)).
+  { unfold dot, meridian; simpl; ring. }
+  assert (HR : dot (meridian a) X * (vx b * vx b + vy b * vy b) < 0).
+  { rewrite Hid.
+    assert (T1 : (vx b * vx X + vy b * vy X) * dot (meridian a) b < 0) by nra.
+    assert (T2 : dot (meridian b) X * (vx a * vx b + vy a * vy b) < 0) by nra.
+    lra. }
+  destruct (Qlt_le_dec (dot (meridian a) X) 0) as [H|H]; [exact H|].
+  assert (dot (meridian a) X * (vx b * vx b + vy b * vy b) >= 0) by nra. lra.
+Qed.
+
+Theorem decide_seaward_of_p4 : forall X,
+  0 < vx p4 * vx X + vy p4 * vy X ->
+  dot (meridian p4) X < 0 ->
+  decide X = Indeterminate.
+Proof.
+  intros X Hhemi Hwest.
+  assert (Hp2 : dot (meridian p2) X < 0).
+  { apply (meridian_trans p2 p4 X);
+      [ apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Hhemi
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Hwest ]. }
+  assert (Hp3 : dot (meridian p3) X < 0).
+  { apply (meridian_trans p3 p4 X);
+      [ apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Hhemi
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Hwest ]. }
+  assert (E2 : (dot (meridian p2) X ?= 0) = Lt) by (apply Qlt_alt; exact Hp2).
+  assert (E3 : (dot (meridian p3) X ?= 0) = Lt) by (apply Qlt_alt; exact Hp3).
+  assert (E4 : (dot (meridian p4) X ?= 0) = Lt) by (apply Qlt_alt; exact Hwest).
+  unfold decide, in_band, east_of, west_of.
+  rewrite E2, E3, E4. reflexivity.
+Qed.
+
+Lemma meridian_trans_east : forall a b X,
+  0 < vx b * vx b + vy b * vy b ->
+  0 < vx a * vx b + vy a * vy b ->
+  0 < vx b * vx X + vy b * vy X ->
+  0 < dot (meridian a) b -> 0 < dot (meridian b) X -> 0 < dot (meridian a) X.
+Proof.
+  intros a b X Hbb Hab Hbx Habe Hbxe.
+  assert (Hid : dot (meridian a) X * (vx b * vx b + vy b * vy b)
+    == (vx b * vx X + vy b * vy X) * dot (meridian a) b
+      + dot (meridian b) X * (vx a * vx b + vy a * vy b)).
+  { unfold dot, meridian; simpl; ring. }
+  assert (HR : 0 < dot (meridian a) X * (vx b * vx b + vy b * vy b)).
+  { rewrite Hid.
+    assert (T1 : 0 < (vx b * vx X + vy b * vy X) * dot (meridian a) b) by nra.
+    assert (T2 : 0 < dot (meridian b) X * (vx a * vx b + vy a * vy b)) by nra.
+    lra. }
+  destruct (Qlt_le_dec 0 (dot (meridian a) X)) as [H|H]; [exact H|].
+  assert (dot (meridian a) X * (vx b * vx b + vy b * vy b) <= 0) by nra. lra.
+Qed.
+
+Theorem decide_landward_of_p1 : forall X,
+  0 < vx p1 * vx X + vy p1 * vy X ->
+  0 < dot (meridian p1) X ->
+  decide X = Indeterminate.
+Proof.
+  intros X Hhemi Heast.
+  assert (Hp2 : 0 < dot (meridian p2) X).
+  { apply (meridian_trans_east p2 p1 X);
+      [ apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Hhemi
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Heast ]. }
+  assert (Hp3 : 0 < dot (meridian p3) X).
+  { apply (meridian_trans_east p3 p1 X);
+      [ apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Hhemi
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Heast ]. }
+  assert (Hp4 : 0 < dot (meridian p4) X).
+  { apply (meridian_trans_east p4 p1 X);
+      [ apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Hhemi
+      | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+      | exact Heast ]. }
+  assert (E1 : (dot (meridian p1) X ?= 0) = Gt) by (apply Qgt_alt; exact Heast).
+  assert (E2 : (dot (meridian p2) X ?= 0) = Gt) by (apply Qgt_alt; exact Hp2).
+  assert (E3 : (dot (meridian p3) X ?= 0) = Gt) by (apply Qgt_alt; exact Hp3).
+  assert (E4 : (dot (meridian p4) X ?= 0) = Gt) by (apply Qgt_alt; exact Hp4).
+  unfold decide, in_band, east_of, west_of.
+  rewrite E1, E2, E3, E4. reflexivity.
+Qed.
+
+(* ===== Generic gapless coverage (any monotone polyline, not only the MBL). =====
+   A point west of the eastmost point and east of the westmost point of a
+   2+-point polyline lies in some band. ===== *)
+Fixpoint in_some_band (pts : list Vec) (X : Vec) : Prop :=
+  match pts with
+  | pe :: ((pw :: _) as rest) => in_band pw pe X = true \/ in_some_band rest X
+  | _ => False
+  end.
+
+Lemma east_false_west_true : forall p X, east_of p X = false -> west_of p X = true.
+Proof.
+  intros p X H. unfold east_of, west_of in *.
+  destruct (dot (meridian p) X ?= 0); [discriminate H | reflexivity | discriminate H].
+Qed.
+
+Lemma decide_poly_covers : forall pts X d,
+  (2 <= length pts)%nat ->
+  match pts with pe :: _ => west_of pe X = true | _ => True end ->
+  east_of (last pts d) X = true ->
+  in_some_band pts X.
+Proof.
+  induction pts as [|a pts' IH]; intros X d Hlen Hhead Hlast.
+  - simpl in Hlen; lia.
+  - destruct pts' as [|b rest].
+    + simpl in Hlen; lia.
+    + destruct (east_of b X) eqn:E.
+      * left. unfold in_band. rewrite E. rewrite Hhead. reflexivity.
+      * right.
+        assert (Hwb : west_of b X = true) by (apply east_false_west_true; exact E).
+        destruct rest as [|c rest'].
+        -- simpl in Hlast. rewrite E in Hlast. discriminate Hlast.
+        -- apply (IH X d).
+           ++ simpl; lia.
+           ++ exact Hwb.
+           ++ simpl in Hlast. exact Hlast.
+Qed.
+
+Theorem mbl_in_some_band : forall X,
+  west_of p1 X = true -> east_of p4 X = true ->
+  in_some_band [p1; p2; p3; p4] X.
+Proof.
+  intros X H1 H4. apply (decide_poly_covers [p1; p2; p3; p4] X p4).
+  - simpl; lia.
+  - exact H1.
+  - simpl. exact H4.
+Qed.
+
 (* ===== Named offshore features and claim-line points. =====
    WGS84-derived rational unit vectors (within 1.6e-13 of the true unit
    vectors); see wolfram/derive.wl for the provenance and an independent
@@ -669,6 +825,25 @@ Theorem orientation_consistent :
   (decide karish = Israeli /\ decide point1_israel = Lebanese). (* segment P3-P4 *)
 Proof. repeat split; vm_compute; reflexivity. Qed.
 
+(* The positive/negative side of each segment is the geographic south/north
+   side, grounded by the poles rather than by sample witnesses: the south pole
+   is on the positive (Israeli) side of all three segments and the north pole on
+   the negative (Lebanese) side, since dot nseg (0,0,-+1) = -+ vz nseg and every
+   vz nseg is negative (mbl_monotone_west). *)
+Definition south_pole : Vec := mkVec 0 0 (-(1)).
+Definition north_pole : Vec := mkVec 0 0 1.
+
+Theorem positive_side_is_south :
+  0 < dot nseg1 south_pole /\ 0 < dot nseg2 south_pole /\ 0 < dot nseg3 south_pole.
+Proof. repeat split; apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity. Qed.
+
+Theorem negative_side_is_north :
+  dot nseg1 north_pole < 0 /\ dot nseg2 north_pole < 0 /\ dot nseg3 north_pole < 0.
+Proof. repeat split; apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity. Qed.
+
+Theorem south_pole_israeli : decide south_pole = Israeli.
+Proof. vm_compute. reflexivity. Qed.
+
 (* ===== The three historical claim lines and the agreement's resolution. ===== *)
 
 (* Israel's Line 1, anchored at its disputed seaward endpoint. *)
@@ -756,6 +931,21 @@ Lemma nseg_norm_bounds :
   dot nseg2 nseg2 <= nseg2_norm_ub * nseg2_norm_ub /\
   dot nseg3 nseg3 <= nseg3_norm_ub * nseg3_norm_ub.
 Proof. repeat split; apply Qle_bool_iff; vm_compute; reflexivity. Qed.
+
+(* Lower bounds on the segment-normal magnitudes, used with the upper bounds to
+   turn a small clearance into an upper bound on the distance to the line in the
+   geometric bridge (the proximity / corridor direction). *)
+Definition nseg1_norm_lb : Q := 2 # 10000.
+Definition nseg2_norm_lb : Q := 24 # 10000.
+Definition nseg3_norm_lb : Q := 17 # 1000.
+Lemma nseg_norm_lb_bounds :
+  nseg1_norm_lb * nseg1_norm_lb <= dot nseg1 nseg1 /\
+  nseg2_norm_lb * nseg2_norm_lb <= dot nseg2 nseg2 /\
+  nseg3_norm_lb * nseg3_norm_lb <= dot nseg3 nseg3.
+Proof.
+  repeat split; unfold nseg1_norm_lb, nseg2_norm_lb, nseg3_norm_lb;
+    apply Qle_bool_iff; vm_compute; reflexivity.
+Qed.
 
 (* ===== Robustness of the verdict (the error envelope). =====               *)
 
@@ -928,6 +1118,72 @@ Proof.
     apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity.
 Qed.
 
+(* General form: ANY committed point whose clearance exceeds the combined
+   model+rounding budget has a verdict robust to that budget, not only the six
+   named features.  (Sub-budget proximity genuinely cannot be certified.) *)
+Definition total_budget : Q := model_det_budget + rounding_det_budget.
+
+Theorem decide_Israeli_robust : forall X dtrue,
+  decide X = Israeli -> total_budget < clearance X ->
+  Qabs (dtrue - clearance X) <= total_budget -> 0 < dtrue.
+Proof.
+  intros X dtrue _ Hbud Hperturb.
+  apply Qabs_Qle_condition in Hperturb. destruct Hperturb as [Hlo Hhi].
+  unfold total_budget, model_det_budget, rounding_det_budget in *. lra.
+Qed.
+
+Theorem decide_Lebanese_robust : forall X dtrue,
+  decide X = Lebanese -> total_budget < clearance X ->
+  Qabs (dtrue - (- clearance X)) <= total_budget -> dtrue < 0.
+Proof.
+  intros X dtrue _ Hbud Hperturb.
+  apply Qabs_Qle_condition in Hperturb. destruct Hperturb as [Hlo Hhi].
+  unfold total_budget, model_det_budget, rounding_det_budget in *. lra.
+Qed.
+
+(* ===== The WGS84 ellipsoid model error, internalized (no trust in derive.wl).
+   The ellipsoidal ECEF direction is the spherical one with z scaled by 1-e^2.
+   For the side determinant det3 a b c = a.(b x c) this gives an EXACT identity
+   (the e^4, e^6 terms vanish, since they would need the polar axis zhat in two
+   determinant slots):
+     det3(ze a, ze b, ze c) = det3 a b c - e^2 * D.
+   So for every committed feature the spherical and ellipsoidal side
+   determinants share sign: the spherical model never flips a verdict. ===== *)
+Definition e2 : Q := 669437999014 # 100000000000000.   (* WGS84 first eccentricity^2 *)
+Definition zscale (v : Vec) : Vec := mkVec (vx v) (vy v) ((1 - e2) * vz v).
+Definition det3 (a b c : Vec) : Q := dot a (cross b c).
+Definition zhat : Vec := mkVec 0 0 1.
+
+Lemma ellip_det_identity : forall a b c,
+  det3 (zscale a) (zscale b) (zscale c) ==
+  det3 a b c
+  - e2 * (vz a * det3 zhat b c + vz b * det3 a zhat c + vz c * det3 a b zhat).
+Proof. intros; unfold det3, zscale, zhat, dot, cross; simpl; ring. Qed.
+
+Lemma det3_nseg2 : forall X, det3 X p2 p3 == dot nseg2 X.
+Proof. intro X. unfold det3, nseg2, dot, cross; simpl; ring. Qed.
+Lemma det3_nseg3 : forall X, det3 X p3 p4 == dot nseg3 X.
+Proof. intro X. unfold det3, nseg3, dot, cross; simpl; ring. Qed.
+
+Theorem karish_ellip_sign :
+  (det3 (zscale karish) (zscale p3) (zscale p4) ?= 0) = (det3 karish p3 p4 ?= 0).
+Proof. vm_compute. reflexivity. Qed.
+Theorem karish_north_ellip_sign :
+  (det3 (zscale karish_north) (zscale p3) (zscale p4) ?= 0) = (det3 karish_north p3 p4 ?= 0).
+Proof. vm_compute. reflexivity. Qed.
+Theorem tanin_ellip_sign :
+  (det3 (zscale tanin) (zscale p3) (zscale p4) ?= 0) = (det3 tanin p3 p4 ?= 0).
+Proof. vm_compute. reflexivity. Qed.
+Theorem point1_ellip_sign :
+  (det3 (zscale point1_israel) (zscale p3) (zscale p4) ?= 0) = (det3 point1_israel p3 p4 ?= 0).
+Proof. vm_compute. reflexivity. Qed.
+Theorem qana_isr_ellip_sign :
+  (det3 (zscale qana_isr) (zscale p2) (zscale p3) ?= 0) = (det3 qana_isr p2 p3 ?= 0).
+Proof. vm_compute. reflexivity. Qed.
+Theorem qana_leb_ellip_sign :
+  (det3 (zscale qana_leb) (zscale p2) (zscale p3) ?= 0) = (det3 qana_leb p2 p3 ?= 0).
+Proof. vm_compute. reflexivity. Qed.
+
 (* ===== Front-end: building a position for the geofence. =====
    A consumer converts a geodetic fix (degrees) to an ECEF unit vector and
    rounds each component to a rational (done outside Coq, where trigonometry
@@ -984,6 +1240,32 @@ Proof.
   - intro H. apply Forall_inv in H. simpl in H. rewrite HL in H. discriminate.
   - intro H. apply Forall_inv_tail in H. apply Forall_inv in H.
     rewrite HI in H. discriminate.
+Qed.
+
+(* Section 2F in general form: a deposit (set of points) crosses the MBL when it
+   has a committed point on each side; no party may take a crossing deposit
+   unilaterally, since neither "all Israeli" nor "all Lebanese" can hold of it.
+   The Qana prospect is the instance. *)
+Definition Deposit := list Vec.
+Definition crosses_mbl (D : Deposit) : Prop :=
+  (exists p, In p D /\ decide p = Israeli) /\
+  (exists q, In q D /\ decide q = Lebanese).
+
+Theorem crossing_deposit_not_unilateral : forall D : Deposit,
+  crosses_mbl D ->
+  (~ Forall (fun X => decide X = Israeli) D) /\
+  (~ Forall (fun X => decide X = Lebanese) D).
+Proof.
+  intros D [[p [Hp Hpi]] [q [Hq Hql]]]. split.
+  - intro H. rewrite Forall_forall in H. specialize (H q Hq). rewrite Hql in H. discriminate.
+  - intro H. rewrite Forall_forall in H. specialize (H p Hp). rewrite Hpi in H. discriminate.
+Qed.
+
+Theorem qana_prospect_crosses : crosses_mbl [qana_leb; qana_isr].
+Proof.
+  destruct qana_straddles as [HL HI]. split.
+  - exists qana_isr. split; [right; left; reflexivity | exact HI].
+  - exists qana_leb. split; [left; reflexivity | exact HL].
 Qed.
 
 (* Section 1E declares a permanent and equitable resolution.  UNCLOS Articles
@@ -1054,6 +1336,53 @@ Qed.
 
 Lemma Rnorm2_RVof : forall v, Rnorm2 (RVof v) = Q2R (dot v v).
 Proof. intro v. unfold Rnorm2. rewrite Q2R_dot. reflexivity. Qed.
+
+(* The geodetic-to-ECEF embedding inside Coq, using Coq's own sin/cos: the
+   target unit vector for a geodetic (latitude, longitude) in radians.  It is a
+   genuine unit vector; the rational model points are this embedding evaluated
+   at the boundary coordinates and rounded, the rounding certified by
+   near_unit.  (Bounding a specific rational against a specific transcendental
+   sin/cos value is the part that necessarily stays in Wolfram.) *)
+Definition ecef_unit (phi lam : R) : RVec :=
+  mkRVec (cos phi * cos lam) (cos phi * sin lam) (sin phi).
+Lemma ecef_unit_is_unit : forall phi lam, Rnorm2 (ecef_unit phi lam) = 1.
+Proof.
+  intros phi lam. unfold Rnorm2, Rdot, ecef_unit; simpl.
+  pose proof (sin2_cos2 phi) as Hp. pose proof (sin2_cos2 lam) as Hl.
+  unfold Rsqr in *. nra.
+Qed.
+
+(* ----- Proximity (corridor): a committed position is genuinely NEAR the line,
+   not merely on a side.  The foot of the perpendicular from a unit position X
+   to a segment's great circle is an explicit boundary-circle point at arc
+   distance asin(|n.X|/|n|), so the distance to the boundary is
+   R_earth * asin(clearance/|n|). ----- *)
+Definition Rscale (k : R) (v : RVec) : RVec := mkRVec (k * rx v) (k * ry v) (k * rz v).
+Definition Rsub (a b : RVec) : RVec := mkRVec (rx a - rx b) (ry a - ry b) (rz a - rz b).
+
+Lemma Rdot_comm : forall a b, Rdot a b = Rdot b a.
+Proof. intros; unfold Rdot; ring. Qed.
+Lemma Rdot_sub_r : forall a b c, Rdot a (Rsub b c) = Rdot a b - Rdot a c.
+Proof. intros; unfold Rdot, Rsub; simpl; ring. Qed.
+Lemma Rdot_scale_r : forall k a b, Rdot a (Rscale k b) = k * Rdot a b.
+Proof. intros; unfold Rdot, Rscale; simpl; ring. Qed.
+Lemma Rnorm2_scale : forall k v, Rnorm2 (Rscale k v) = k * k * Rnorm2 v.
+Proof. intros; unfold Rnorm2, Rdot, Rscale; simpl; ring. Qed.
+
+Lemma q_over_sqrt : forall q, 0 < q -> / sqrt q * q = sqrt q.
+Proof.
+  intros q Hq. assert (Hs : 0 < sqrt q) by (apply sqrt_lt_R0; exact Hq).
+  assert (Hss : sqrt q * sqrt q = q) by (apply sqrt_sqrt; lra).
+  rewrite <- Hss at 2. field. lra.
+Qed.
+Lemma inv_sqrt_sq : forall q, 0 < q -> / sqrt q * / sqrt q * q = 1.
+Proof.
+  intros q Hq. assert (Hs : 0 < sqrt q) by (apply sqrt_lt_R0; exact Hq).
+  assert (Hss : sqrt q * sqrt q = q) by (apply sqrt_sqrt; lra).
+  rewrite <- Hss at 3. field. lra.
+Qed.
+
+(* foot_on_circle is stated after acos_sqrt_1ss below (it depends on it). *)
 
 (* ----- Sign agreement: the rational verdict is the sign of the real scalar
    triple product (a genuine geometric orientation test). ----- *)
@@ -1154,6 +1483,63 @@ Proof.
   replace (1 - s*s) with (1 - Rsqr s) by (unfold Rsqr; ring).
   rewrite <- (cos_asin s) by lra.
   apply acos_cos. split; [apply asin_nonneg; lra | pose proof (asin_bound s); lra].
+Qed.
+
+(* Proximity (corridor): the foot of the perpendicular from a unit position X to
+   a segment's great circle is an explicit boundary-circle point at arc distance
+   asin(|n.X|/|n|), so a committed position is genuinely near the line. *)
+Lemma foot_on_circle : forall n X,
+  0 < Rnorm2 n -> Rnorm2 X = 1 -> (Rdot n X) * (Rdot n X) < Rnorm2 n ->
+  exists Y, Rnorm2 Y = 1 /\ Rdot n Y = 0 /\
+    acos (Rdot X Y) = asin (Rabs (Rdot n X) / sqrt (Rnorm2 n)).
+Proof.
+  intros n X Hn HX Hlt.
+  assert (Hne : Rnorm2 n <> 0) by lra.
+  assert (HXX : Rdot X X = 1) by (change (Rnorm2 X = 1); exact HX).
+  set (al := Rdot n X / Rnorm2 n).
+  set (P := Rsub X (Rscale al n)).
+  assert (HnP : Rdot n P = 0).
+  { unfold P. rewrite Rdot_sub_r, Rdot_scale_r.
+    change (Rdot n n) with (Rnorm2 n). unfold al. field. lra. }
+  assert (HXP : Rdot X P = 1 - Rdot n X * Rdot n X / Rnorm2 n).
+  { unfold P. rewrite Rdot_sub_r, Rdot_scale_r, HXX, (Rdot_comm X n).
+    unfold al, Rdiv. ring. }
+  assert (Hqraw : Rnorm2 P = Rnorm2 X - 2 * al * Rdot n X + al * al * Rnorm2 n).
+  { unfold P, Rsub, Rscale, Rnorm2, Rdot; simpl. ring. }
+  assert (Hq : Rnorm2 P = 1 - Rdot n X * Rdot n X / Rnorm2 n).
+  { rewrite Hqraw, HX. unfold al. field. lra. }
+  set (q := Rnorm2 P).
+  assert (Hqpos : 0 < q).
+  { unfold q. rewrite Hq.
+    assert (H : Rdot n X * Rdot n X / Rnorm2 n < 1).
+    { apply Rmult_lt_reg_r with (Rnorm2 n); [exact Hn|].
+      unfold Rdiv. rewrite Rmult_assoc, Rinv_l, Rmult_1_r by lra. lra. }
+    lra. }
+  set (s := Rabs (Rdot n X) / sqrt (Rnorm2 n)).
+  assert (Hsn : 0 < sqrt (Rnorm2 n)) by (apply sqrt_lt_R0; exact Hn).
+  assert (Hsnn : sqrt (Rnorm2 n) * sqrt (Rnorm2 n) = Rnorm2 n) by (apply sqrt_sqrt; lra).
+  assert (Hs0 : 0 <= s).
+  { unfold s. apply Rmult_le_pos; [apply Rabs_pos | apply Rlt_le, Rinv_0_lt_compat; exact Hsn]. }
+  assert (Hs2 : s * s = Rdot n X * Rdot n X / Rnorm2 n).
+  { unfold s, Rdiv.
+    replace (Rabs (Rdot n X) * / sqrt (Rnorm2 n) * (Rabs (Rdot n X) * / sqrt (Rnorm2 n)))
+      with (Rabs (Rdot n X) * Rabs (Rdot n X) * (/ sqrt (Rnorm2 n) * / sqrt (Rnorm2 n))) by ring.
+    rewrite <- Rabs_mult, Rabs_pos_eq by nra.
+    rewrite <- Rinv_mult, Hsnn. reflexivity. }
+  assert (Hsle1 : s <= 1).
+  { apply Rsqr_incr_0_var; [| lra]. unfold Rsqr. rewrite Hs2.
+    apply Rmult_le_reg_r with (Rnorm2 n); [exact Hn|].
+    unfold Rdiv. rewrite Rmult_assoc, Rinv_l, Rmult_1_r by lra. nra. }
+  exists (Rscale (/ sqrt q) P). repeat split.
+  - rewrite Rnorm2_scale. apply inv_sqrt_sq; exact Hqpos.
+  - rewrite Rdot_scale_r, HnP. ring.
+  - assert (HXY : Rdot X (Rscale (/ sqrt q) P) = sqrt q).
+    { rewrite Rdot_scale_r, HXP.
+      replace (1 - Rdot n X * Rdot n X / Rnorm2 n) with q by (unfold q; rewrite Hq; reflexivity).
+      apply q_over_sqrt; exact Hqpos. }
+    rewrite HXY.
+    assert (Hq2 : q = 1 - s * s) by (unfold q; rewrite Hq, Hs2; reflexivity).
+    rewrite Hq2. apply acos_sqrt_1ss; [exact Hs0 | exact Hsle1].
 Qed.
 
 (* Core: any unit Y on segment normal n's great circle is at least asin(s)
@@ -1277,6 +1663,160 @@ Proof.
     assert (Hclb0 : 0 <= Q2R karish_clear_lb) by
       (apply Q2R_nonneg; unfold karish_clear_lb; apply Qle_bool_iff; vm_compute; reflexivity).
     nra.
+Qed.
+
+(* ----- Non-unit generalization of the distance bound, so the per-feature
+   kilometre clearances apply to the features' WGS84 unit positions directly
+   (the rational vectors, certified near-unit), not an idealized point. ----- *)
+Lemma dot_circle_bound_gen : forall n X Y,
+  Rdot Y Y = 1 -> Rdot n Y = 0 ->
+  Rnorm2 n * ((Rdot X Y)*(Rdot X Y)) + (Rdot n X)*(Rdot n X) <= Rnorm2 n * Rnorm2 X.
+Proof.
+  intros n X Y HY HnY.
+  pose proof (gram_triple_sq n X Y) as G.
+  assert (Hsq : 0 <= Rdot n (Rcross X Y) * Rdot n (Rcross X Y)) by nra.
+  unfold Rnorm2 in *. rewrite HY, HnY in G. nra.
+Qed.
+
+Lemma arc_ge_asin_gen : forall n X Y s,
+  Rdot Y Y = 1 -> Rdot n Y = 0 -> 0 < Rnorm2 n -> 0 < Rnorm2 X ->
+  0 <= s -> s <= 1 -> s*s*(Rnorm2 n * Rnorm2 X) <= (Rdot n X)*(Rdot n X) ->
+  asin s <= acos (Rdot X Y / sqrt (Rnorm2 X)).
+Proof.
+  intros n X Y s HY HnY Hn HX Hs0 Hs1 Hclb.
+  pose proof (dot_circle_bound_gen n X Y HY HnY) as Hb.
+  set (u := sqrt (Rnorm2 X)).
+  assert (Hu : 0 < u) by (apply sqrt_lt_R0; exact HX).
+  assert (Huu : u * u = Rnorm2 X) by (apply sqrt_sqrt; lra).
+  assert (Ha2 : (Rdot X Y)*(Rdot X Y) <= Rnorm2 X * (1 - s*s)).
+  { apply Rmult_le_reg_l with (Rnorm2 n); [exact Hn|]. nra. }
+  set (c := Rdot X Y / u).
+  assert (Hcu : c * u = Rdot X Y) by (unfold c; field; lra).
+  assert (Hccuu : c*c*(u*u) = (Rdot X Y)*(Rdot X Y)) by (rewrite <- Hcu; ring).
+  rewrite Huu in Hccuu.
+  assert (Hc2 : c*c <= 1 - s*s).
+  { apply Rmult_le_reg_r with (Rnorm2 X); [exact HX|]. rewrite Hccuu. nra. }
+  assert (Hc_bd : -1 <= c <= 1).
+  { assert (c*c <= 1) by nra. split; nra. }
+  assert (Hc_ub : c <= sqrt (1 - s*s)).
+  { apply Rle_trans with (Rabs c); [apply Rle_abs|].
+    rewrite <- sqrt_Rsqr_abs. apply sqrt_le_1_alt. unfold Rsqr. exact Hc2. }
+  assert (Hsqrt_bd : -1 <= sqrt (1 - s*s) <= 1).
+  { split.
+    - apply Rle_trans with 0; [lra | apply sqrt_pos].
+    - apply Rle_trans with (sqrt 1); [apply sqrt_le_1_alt; nra | rewrite sqrt_1; lra]. }
+  unfold c. rewrite <- (acos_sqrt_1ss s Hs0 Hs1).
+  apply acos_antitone; [exact Hc_bd | exact Hsqrt_bd | exact Hc_ub].
+Qed.
+
+Theorem boundary_far_from_position_gen : forall (n X Y : RVec) (s : R),
+  Rdot Y Y = 1 -> Rdot n Y = 0 -> 0 < Rnorm2 n -> 0 < Rnorm2 X ->
+  0 <= s -> s <= 1 -> s*s*(Rnorm2 n * Rnorm2 X) <= (Rdot n X)*(Rdot n X) ->
+  R_earth_km * s <= R_earth_km * acos (Rdot X Y / sqrt (Rnorm2 X)).
+Proof.
+  intros n X Y s HY HnY Hn HX Hs0 Hs1 Hclb.
+  apply Rmult_le_compat_l; [unfold R_earth_km; lra|].
+  apply Rle_trans with (asin s); [apply asin_ge_self; assumption|].
+  apply (arc_ge_asin_gen n X Y s); assumption.
+Qed.
+
+(* Per-feature schema: from rational side data alone, the boundary lies at
+   least R_earth_km * s kilometres from the feature's WGS84 unit position. *)
+Lemma feature_km : forall (nseg F : Vec) (s : Q),
+  (0 <= s)%Q -> (s <= 1)%Q ->
+  (0 < dot nseg nseg)%Q -> (0 < dot F F)%Q ->
+  (s * s * (dot nseg nseg * dot F F) <= dot nseg F * dot nseg F)%Q ->
+  forall Y, Rdot Y Y = 1 -> Rdot (RVof nseg) Y = 0 ->
+  R_earth_km * Q2R s <= R_earth_km * acos (Rdot (RVof F) Y / sqrt (Rnorm2 (RVof F))).
+Proof.
+  intros nseg F s Hs0 Hs1 Hnn Hff Hq Y HY HnY.
+  apply (boundary_far_from_position_gen (RVof nseg) (RVof F) Y (Q2R s) HY HnY).
+  - rewrite Rnorm2_RVof. apply Qsign_pos_real. apply Qgt_alt. exact Hnn.
+  - rewrite Rnorm2_RVof. apply Qsign_pos_real. apply Qgt_alt. exact Hff.
+  - apply Q2R_nonneg; exact Hs0.
+  - apply Q2R_le_1; exact Hs1.
+  - rewrite !Rnorm2_RVof. rewrite <- !Q2R_dot. rewrite <- !Q2R_mult.
+    apply Qle_Rle. exact Hq.
+Qed.
+
+Definition s_karish       : Q := 216 # 100000.
+Definition s_karish_north : Q := 144 # 100000.
+Definition s_tanin        : Q := 545 # 100000.
+Definition s_point1       : Q := 247 # 100000.
+Definition s_qana_leb     : Q :=  83 # 100000.
+Definition s_qana_isr     : Q := 105 # 100000.
+
+Ltac feature_km_tac nseg F s :=
+  apply (feature_km nseg F s);
+  [ apply Qle_bool_iff; vm_compute; reflexivity
+  | apply Qle_bool_iff; vm_compute; reflexivity
+  | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+  | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity
+  | apply Qle_bool_iff; vm_compute; reflexivity
+  | assumption | assumption ].
+
+(* Tanin ~ 34.7 km, Point 1 ~ 15.7, Karish ~ 13.8, Karish North ~ 9.2,
+   Qana(Isr) ~ 6.7, Qana(Leb) ~ 5.3 km (Wolfram geodesy in derive.wl). *)
+Theorem tanin_distance_km : forall Y,
+  Rdot Y Y = 1 -> Rdot (RVof nseg3) Y = 0 ->
+  R_earth_km * Q2R s_tanin <= R_earth_km * acos (Rdot (RVof tanin) Y / sqrt (Rnorm2 (RVof tanin))).
+Proof. intros Y HY HnY. feature_km_tac nseg3 tanin s_tanin. Qed.
+
+Theorem karish_distance_km : forall Y,
+  Rdot Y Y = 1 -> Rdot (RVof nseg3) Y = 0 ->
+  R_earth_km * Q2R s_karish <= R_earth_km * acos (Rdot (RVof karish) Y / sqrt (Rnorm2 (RVof karish))).
+Proof. intros Y HY HnY. feature_km_tac nseg3 karish s_karish. Qed.
+
+Theorem karish_north_distance_km : forall Y,
+  Rdot Y Y = 1 -> Rdot (RVof nseg3) Y = 0 ->
+  R_earth_km * Q2R s_karish_north <= R_earth_km * acos (Rdot (RVof karish_north) Y / sqrt (Rnorm2 (RVof karish_north))).
+Proof. intros Y HY HnY. feature_km_tac nseg3 karish_north s_karish_north. Qed.
+
+Theorem point1_distance_km : forall Y,
+  Rdot Y Y = 1 -> Rdot (RVof nseg3) Y = 0 ->
+  R_earth_km * Q2R s_point1 <= R_earth_km * acos (Rdot (RVof point1_israel) Y / sqrt (Rnorm2 (RVof point1_israel))).
+Proof. intros Y HY HnY. feature_km_tac nseg3 point1_israel s_point1. Qed.
+
+Theorem qana_isr_distance_km : forall Y,
+  Rdot Y Y = 1 -> Rdot (RVof nseg2) Y = 0 ->
+  R_earth_km * Q2R s_qana_isr <= R_earth_km * acos (Rdot (RVof qana_isr) Y / sqrt (Rnorm2 (RVof qana_isr))).
+Proof. intros Y HY HnY. feature_km_tac nseg2 qana_isr s_qana_isr. Qed.
+
+Theorem qana_leb_distance_km : forall Y,
+  Rdot Y Y = 1 -> Rdot (RVof nseg2) Y = 0 ->
+  R_earth_km * Q2R s_qana_leb <= R_earth_km * acos (Rdot (RVof qana_leb) Y / sqrt (Rnorm2 (RVof qana_leb))).
+Proof. intros Y HY HnY. feature_km_tac nseg2 qana_leb s_qana_leb. Qed.
+
+(* Distance to the WHOLE boundary (the union of the three segment circles): a
+   feature clearing all three circles by s is at least R_earth * s km from every
+   boundary point. *)
+Lemma whole_boundary_far : forall (F : Vec) (s : Q) (Y : RVec),
+  (0 <= s)%Q -> (s <= 1)%Q ->
+  (0 < dot nseg1 nseg1)%Q -> (0 < dot nseg2 nseg2)%Q -> (0 < dot nseg3 nseg3)%Q ->
+  (0 < dot F F)%Q ->
+  (s * s * (dot nseg1 nseg1 * dot F F) <= dot nseg1 F * dot nseg1 F)%Q ->
+  (s * s * (dot nseg2 nseg2 * dot F F) <= dot nseg2 F * dot nseg2 F)%Q ->
+  (s * s * (dot nseg3 nseg3 * dot F F) <= dot nseg3 F * dot nseg3 F)%Q ->
+  Rdot Y Y = 1 ->
+  (Rdot (RVof nseg1) Y = 0 \/ Rdot (RVof nseg2) Y = 0 \/ Rdot (RVof nseg3) Y = 0) ->
+  R_earth_km * Q2R s <= R_earth_km * acos (Rdot (RVof F) Y / sqrt (Rnorm2 (RVof F))).
+Proof.
+  intros F s Y Hs0 Hs1 H1 H2 H3 HF Hq1 Hq2 Hq3 HY [HY1|[HY2|HY3]].
+  - apply (feature_km nseg1 F s); assumption.
+  - apply (feature_km nseg2 F s); assumption.
+  - apply (feature_km nseg3 F s); assumption.
+Qed.
+
+Theorem karish_whole_boundary_km : forall Y,
+  Rdot Y Y = 1 ->
+  (Rdot (RVof nseg1) Y = 0 \/ Rdot (RVof nseg2) Y = 0 \/ Rdot (RVof nseg3) Y = 0) ->
+  R_earth_km * Q2R s_karish
+    <= R_earth_km * acos (Rdot (RVof karish) Y / sqrt (Rnorm2 (RVof karish))).
+Proof.
+  intros Y HY Hbd. apply (whole_boundary_far karish s_karish Y);
+    first [ exact HY | exact Hbd
+          | apply Qle_bool_iff; vm_compute; reflexivity
+          | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity ].
 Qed.
 
 End Bridge.

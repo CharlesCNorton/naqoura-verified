@@ -21,3 +21,20 @@ Print Assumptions Bridge.karish_min_distance_km.
 (* Precise geometric meaning of a committed verdict. *)
 Print Assumptions Bridge.decide_Israeli_real_meaning.
 Print Assumptions Bridge.decide_Lebanese_real_meaning.
+
+(* Coq-side geodetic embedding, non-unit distance bound, per-feature kilometre
+   clearances applied to the features' WGS84 unit positions. *)
+Print Assumptions Bridge.ecef_unit_is_unit.
+Print Assumptions Bridge.boundary_far_from_position_gen.
+Print Assumptions Bridge.feature_km.
+Print Assumptions Bridge.tanin_distance_km.
+Print Assumptions Bridge.karish_distance_km.
+Print Assumptions Bridge.karish_north_distance_km.
+Print Assumptions Bridge.point1_distance_km.
+Print Assumptions Bridge.qana_isr_distance_km.
+Print Assumptions Bridge.qana_leb_distance_km.
+
+(* Proximity (foot of perpendicular) and whole-boundary distance. *)
+Print Assumptions Bridge.foot_on_circle.
+Print Assumptions Bridge.whole_boundary_far.
+Print Assumptions Bridge.karish_whole_boundary_km.

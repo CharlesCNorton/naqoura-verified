@@ -70,3 +70,31 @@ Print Assumptions committed_robust_to_model_and_rounding.
 Print Assumptions of_ecef_scale_free.
 Print Assumptions naqoura_section_2F.
 Print Assumptions prospect_straddle_no_unilateral.
+
+(* Orientation by the poles, longitude transitivity and deferral outside the
+   agreed span, the deposit-crossing mechanism, segment-normal lower bounds. *)
+Print Assumptions positive_side_is_south.
+Print Assumptions negative_side_is_north.
+Print Assumptions south_pole_israeli.
+Print Assumptions nseg_norm_lb_bounds.
+Print Assumptions crossing_deposit_not_unilateral.
+Print Assumptions qana_prospect_crosses.
+Print Assumptions meridian_trans.
+Print Assumptions decide_seaward_of_p4.
+Print Assumptions meridian_trans_east.
+Print Assumptions decide_landward_of_p1.
+
+(* General robustness above budget, generic coverage, ellipsoid model error. *)
+Print Assumptions decide_Israeli_robust.
+Print Assumptions decide_Lebanese_robust.
+Print Assumptions decide_poly_covers.
+Print Assumptions mbl_in_some_band.
+Print Assumptions ellip_det_identity.
+Print Assumptions det3_nseg2.
+Print Assumptions det3_nseg3.
+Print Assumptions karish_ellip_sign.
+Print Assumptions karish_north_ellip_sign.
+Print Assumptions tanin_ellip_sign.
+Print Assumptions point1_ellip_sign.
+Print Assumptions qana_isr_ellip_sign.
+Print Assumptions qana_leb_ellip_sign.
