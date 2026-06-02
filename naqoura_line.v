@@ -773,10 +773,11 @@ Definition ras_naqoura : Vec := mkVec (2368622 # 3455649) (2004128 # 4159821) (1
 (* Qana/Sidon prospect: representative points either side of the MBL.  Section 2
    of the agreement records that the Prospect lies partly in Lebanon's Block 9
    and partly in Israel's Block 72; the 31/1B exploration well sits in Block 9.
-   The exact reservoir outline is not public, so these are representative
-   positions in the prospect vicinity bracketing the boundary, not surveyed
-   corners; the robustness envelope below makes the verdicts insensitive to
-   their precise placement.                                                    *)
+   Block 9's own boundary is sourced from Decree No. 42 (block9_interior below,
+   proved to lie on Lebanon's side, its corner equal to P3).  The exact reservoir
+   outline is not public, so these two points are representative positions in the
+   prospect vicinity bracketing the boundary, not surveyed corners; the
+   robustness envelope below makes the verdicts insensitive to their placement. *)
 Definition qana_leb : Vec := mkVec (2882075 # 4202159) (1522867 # 3176942) (476190 # 869653).
 Definition qana_isr : Vec := mkVec (899127 # 1309165) (1050501 # 2188517) (814815 # 1492856).
 
@@ -912,6 +913,43 @@ Definition line23_seaward : Vec := p4.
 Theorem line23_endpoint_is_P4 : close_coord decree6433_p23 line23_seaward.
 Proof.
   unfold close_coord, coord_tol, line23_seaward, decree6433_p23, p4, vx, vy, vz;
+    repeat split; apply (proj2 (Qabs_Qle_condition _ _)); split;
+    apply Qle_bool_iff; vm_compute; reflexivity.
+Qed.
+
+(* Lebanon's Block 9 (Decree No. 42, 2015 first offshore licensing round,
+   Annex 1), the licensed block that holds the Qana/Sidon prospect.  Interior
+   vertices in WGS84 from the decree, as rational ECEF directions (1e-9 embedding
+   of the published decimal degrees).  The block was drawn to Lebanon's Line 23,
+   so its south-eastern corner is EEZ Point 22 = the agreed MBL point P3, and its
+   interior lies on Lebanon's side of the agreed line. *)
+Definition block9_A9 : Vec := mkVec (683266884 # 1000000000) (476344580 # 1000000000) (553391549 # 1000000000).
+Definition block9_C9 : Vec := mkVec (686883958 # 1000000000) (471494134 # 1000000000) (553067545 # 1000000000).
+Definition block9_D9 : Vec := mkVec (686175220 # 1000000000) (471007639 # 1000000000) (554360327 # 1000000000).
+Definition block9_E9 : Vec := mkVec (684802218 # 1000000000) (473001638 # 1000000000) (554360327 # 1000000000).
+Definition block9_F9 : Vec := mkVec (683837662 # 1000000000) (474395066 # 1000000000) (554360327 # 1000000000).
+Definition block9_G9 : Vec := mkVec (684367202 # 1000000000) (474762457 # 1000000000) (553391491 # 1000000000).
+Definition block9_interior : list Vec :=
+  [block9_A9; block9_C9; block9_D9; block9_E9; block9_F9; block9_G9].
+Definition block9_corner22 : Vec := mkVec (686638603 # 1000000000) (478695199 # 1000000000) (547154764 # 1000000000).
+
+(* Lebanon's licensed Block 9 lies on Lebanon's side of the agreed boundary:
+   every interior vertex is Lebanese, and the south-eastern corner coincides with
+   the agreed point P3 (so the Qana prospect, in Block 9, straddles into Israel's
+   Block 72 across exactly the agreed line). *)
+Theorem block9_interior_lebanese :
+  Forall (fun X => decide X = Lebanese) block9_interior.
+Proof. repeat constructor; vm_compute; reflexivity. Qed.
+
+(* Decree 42 lists block corners to six decimal degrees, coarser than the
+   deposited DMS of the EEZ points, so the corner matches P3 to 1e-7 (the
+   six-decimal precision) rather than the 1e-9 of mbl_is_decree6433_line. *)
+Theorem block9_corner_is_P3 :
+  Qabs (vx block9_corner22 - vx p3) <= (1 # 10000000) /\
+  Qabs (vy block9_corner22 - vy p3) <= (1 # 10000000) /\
+  Qabs (vz block9_corner22 - vz p3) <= (1 # 10000000).
+Proof.
+  unfold block9_corner22, p3, vx, vy, vz;
     repeat split; apply (proj2 (Qabs_Qle_condition _ _)); split;
     apply Qle_bool_iff; vm_compute; reflexivity.
 Qed.

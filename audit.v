@@ -44,6 +44,8 @@ Print Assumptions tanin_israeli.
 Print Assumptions israeli_fields_off_line.
 Print Assumptions qana_straddles.
 Print Assumptions qana_well_lebanese.
+Print Assumptions block9_interior_lebanese.
+Print Assumptions block9_corner_is_P3.
 Print Assumptions ras_naqoura_deferred.
 Print Assumptions orientation_consistent.
 Print Assumptions shared_line.

@@ -134,6 +134,10 @@ Features and lines (kernel):
   the Qana/Sidon prospect has committed points on both sides; the 31/1B well,
   drilled in Block 9, is Lebanese-side; and neither party's side contains the
   whole prospect, so a unilateral taking would cross the line (Section 2F).
+- `block9_interior_lebanese`, `block9_corner_is_P3` - Lebanon's licensed Block 9
+  (vertices from Decree No. 42) lies on Lebanon's side: every interior vertex is
+  Lebanese and the south-eastern corner coincides with the agreed point P3, so
+  the prospect straddles from Block 9 into Israel's Block 72 across that line.
 - `orientation_consistent`, `positive_side_is_south`, `negative_side_is_north` -
   on every segment the Israeli side is the positive side and the Lebanese side
   the negative side; the positive side contains the geographic south pole and
@@ -256,12 +260,14 @@ Sourced exactly from the primary UN deposits: the four agreed MBL points, which
 are Lebanon's Decree 6433 / MZN.85.2011 points 20-23 and the identical 2022
 Annex A / Annex B points; Israel's superseded deposit points 1, 34, 35 (its 2011
 DOALOS submission, Point 1 being the Cyprus-Israel 2010 Point 1); the
-Cyprus-Lebanon 2007 line; and the Ras Naqoura land terminus. Sourced as
+Cyprus-Lebanon 2007 line; the Ras Naqoura land terminus; and the Block 9
+boundary (Lebanon's Decree No. 42, first licensing round). Sourced as
 operator/region positions: Karish, Karish North, Tanin. Line 29 was never
 formally deposited (the 2021 decree amending Decree 6433 was left unsigned); it
 is anchored here by the Karish field it was drawn to split. The exact Qana
-reservoir outline is not in the public record; the prospect straddle is
-represented by points either side of the line in the Block 9 / Block 72 area.
+reservoir outline is not in the public record (the 31/1B well was a dry hole);
+the prospect straddle is represented by points either side of the line within
+the sourced Block 9 and the Block 72 area.
 
 ## Build
 
