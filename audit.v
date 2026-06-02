@@ -48,6 +48,9 @@ Print Assumptions ras_naqoura_deferred.
 Print Assumptions orientation_consistent.
 Print Assumptions shared_line.
 Print Assumptions supersession.
+Print Assumptions israel_2011_seaward_claim_now_lebanese.
+Print Assumptions mbl_is_decree6433_line.
+Print Assumptions line23_endpoint_is_P4.
 Print Assumptions mbl_between_line1_and_line29.
 Print Assumptions endpoint_latitude_order.
 Print Assumptions cyprus_line_monotone_north.

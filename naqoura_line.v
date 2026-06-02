@@ -61,8 +61,16 @@ Definition cross (a b : Vec) : Vec :=
    dot (meridian p) X has the sign of (longitude X - longitude p). *)
 Definition meridian (p : Vec) : Vec := mkVec (- vy p) (vx p) 0.
 
-(* ----- The four agreed MBL points (rational unit vectors, WGS84-derived). ----- *)
-(* P1 easternmost (offshore start) ... P4 westernmost (toward the tripoint).      *)
+(* ----- The four agreed MBL points (rational unit vectors, WGS84-derived). -----
+   Source: the 2022 Israel-Lebanon Exchange of Letters, Annex A (Lebanon) and
+   Annex B (Israel), which deposit the identical four points; these coincide
+   exactly with Lebanon's Decree 6433 / MZN.85.2011 points 20-23 (cross-checked
+   in mbl_is_decree6433_line below).  P1 is the easternmost, near-shore terminus
+   of the defined line (landward of it the boundary is undelimited, the buoy
+   zone); P4 is the westernmost, seaward terminus toward the Cyprus tripoint.
+   In degrees-minutes-seconds (WGS84), connected by geodesics:
+     P1 = 33 06 34.15 N, 35 02 58.12 E      P2 = 33 06 52.73 N, 35 02 13.86 E
+     P3 = 33 10 19.33 N, 34 52 57.24 E      P4 = 33 31 51.17 N, 33 46 08.78 E *)
 
 Definition p1 : Vec := mkVec (3240185 # 4725163) (2048242 # 4257979) (573521 # 1049942).
 Definition p2 : Vec := mkVec (6046041 # 8816135) (1395546 # 2902183) (2728844 # 4994991).
@@ -727,11 +735,26 @@ Qed.
    vectors); see wolfram/derive.wl for the provenance and an independent
    Wolfram geodesic recomputation of every verdict and clearance below.       *)
 
-(* Israel Line 1 (2011 UN deposit) seaward endpoint, identical to the
-   Cyprus-Lebanon 2007 Point 1 that Israel adopted: 33-38-40 N, 33-53-40 E.
-   Israel near-shore points 34 and 35 were not separately published in the
-   sources consulted; the seaward Point 1 is the salient, disputed end.       *)
+(* Israel's 2011 UN deposit (northern limit of the territorial sea and EEZ,
+   DOALOS, isr_eez_northernlimit2011.pdf, scanned).  Point 1 is derived, per the
+   deposit's own Note 1, from Point 1 of the 2010 Cyprus-Israel EEZ agreement:
+   33-38-40 N, 33-53-40 E.  Points 34 and 35 are the next two seaward points of
+   the same claim line: 34 = 33-10-33.5 N, 34-53-11 E; 35 = 33-13-9 N,
+   34-46-38 E.  The three are independent 1e-9 embeddings of the deposited
+   degree-minute-second values. *)
 Definition point1_israel : Vec := mkVec (2602081 # 3765547) (587755 # 1266028) (1937617 # 3497267).
+Definition israel_point34 : Vec := mkVec (686575834 # 1000000000) (478719499 # 1000000000) (547212267 # 1000000000).
+Definition israel_point35 : Vec := mkVec (687147658 # 1000000000) (477175045 # 1000000000) (547843108 # 1000000000).
+
+(* Israel's entire seaward 2011 claim (its deposited points 1, 34, 35) lies on
+   the Lebanese side of the agreed boundary: the 2022 Exchange of Letters set the
+   line at Lebanon's Line 23, so the points of Israel's former claim are now
+   Lebanese water.  This is the precise sense of the supersession. *)
+Theorem israel_2011_seaward_claim_now_lebanese :
+  decide point1_israel = Lebanese /\
+  decide israel_point34 = Lebanese /\
+  decide israel_point35 = Lebanese.
+Proof. repeat split; vm_compute; reflexivity. Qed.
 
 (* Cyprus-Lebanon 2007 EEZ line, points 2..6 (point 1 = point1_israel). *)
 Definition cyprus2 : Vec := mkVec (2054692 # 2986191) (4100017 # 8818551) (791899 # 1421361).
@@ -852,10 +875,46 @@ Proof. vm_compute. reflexivity. Qed.
 (* Israel's Line 1, anchored at its disputed seaward endpoint. *)
 Definition line1_seaward : Vec := point1_israel.
 
-(* Lebanon's Line 23 (Decree 6433) seaward endpoint, Point 23 = MBL P4 exactly. *)
+(* Lebanon's Line 23 is the "Southern Median Line (Lebanon - Palestine)" of
+   Decree 6433, deposited as MZN.85.2011.LOS (DOALOS ANNEX I, scanned).  Its
+   points 20, 21, 22, 23 are the agreed MBL points P1, P2, P3, P4: the 2022
+   Exchange of Letters adopted Lebanon's Line 23 verbatim.  We embed the four
+   deposited degree-minute-second values independently (1e-9 fixed-point, a
+   coarser and different rounding from the P1..P4 continued-fraction
+   convergents) and certify, by exact rational computation, that each agrees
+   with the corresponding agreed point to within 1e-9 on every component.  This
+   turns "P4 = Point 23" into a checked cross-source identity of the whole line
+   against its primary source, not a definitional restatement. *)
+Definition decree6433_p20 : Vec := mkVec (685729783 # 1000000000) (481036191 # 1000000000) (546240649 # 1000000000).
+Definition decree6433_p21 : Vec := mkVec (685792697 # 1000000000) (480860787 # 1000000000) (546316099 # 1000000000).
+Definition decree6433_p22 : Vec := mkVec (686638605 # 1000000000) (478695194 # 1000000000) (547154765 # 1000000000).
+Definition decree6433_p23 : Vec := mkVec (692948811 # 1000000000) (463347897 # 1000000000) (552386342 # 1000000000).
+
+Definition coord_tol : Q := 1 # 1000000000.
+Definition close_coord (a b : Vec) : Prop :=
+  Qabs (vx a - vx b) <= coord_tol /\
+  Qabs (vy a - vy b) <= coord_tol /\
+  Qabs (vz a - vz b) <= coord_tol.
+
+Theorem mbl_is_decree6433_line :
+  close_coord decree6433_p20 p1 /\ close_coord decree6433_p21 p2 /\
+  close_coord decree6433_p22 p3 /\ close_coord decree6433_p23 p4.
+Proof.
+  repeat split; unfold close_coord, coord_tol, decree6433_p20, decree6433_p21,
+    decree6433_p22, decree6433_p23, p1, p2, p3, p4, vx, vy, vz;
+    apply (proj2 (Qabs_Qle_condition _ _)); split;
+    apply Qle_bool_iff; vm_compute; reflexivity.
+Qed.
+
 Definition line23_seaward : Vec := p4.
-Theorem line23_endpoint_is_P4 : line23_seaward = p4.
-Proof. reflexivity. Qed.
+(* Point 23 is the seaward terminus; decree6433_p23 (its independent embedding)
+   agrees with P4 to 1e-9 by mbl_is_decree6433_line above. *)
+Theorem line23_endpoint_is_P4 : close_coord decree6433_p23 line23_seaward.
+Proof.
+  unfold close_coord, coord_tol, line23_seaward, decree6433_p23, p4, vx, vy, vz;
+    repeat split; apply (proj2 (Qabs_Qle_condition _ _)); split;
+    apply Qle_bool_iff; vm_compute; reflexivity.
+Qed.
 
 (* Lebanon's army Line 29 (2020-2021), anchored by the Karish field it cuts. *)
 Definition line29_anchor : Vec := karish.
@@ -867,13 +926,15 @@ Definition annex_B : list Vec := [p1; p2; p3; p4].
 Theorem shared_line : annex_A = annex_B.
 Proof. reflexivity. Qed.
 
-(* Supersession: Israel's former Line-1 seaward endpoint now lies on the
-   Lebanese side of the agreed boundary (the agreement settled the wedge in
-   Lebanon's favour relative to Israel's 2011 claim); Lebanon's Point 23 is
-   retained as the agreed terminus P4. *)
+(* Supersession (Section 1(D) of the Exchange of Letters): the deposit
+   superseded Israel's points 34, 35, 1 and Lebanon's points 20, 21, 22, 23.
+   Israel's former Line-1 seaward endpoint now lies on the Lebanese side of the
+   agreed boundary (the agreement settled the wedge in Lebanon's favour relative
+   to Israel's 2011 claim), while Lebanon's Point 23 is retained as the agreed
+   terminus P4 (matched to its primary Decree 6433 embedding to 1e-9). *)
 Theorem supersession :
-  decide line1_seaward = Lebanese /\ line23_seaward = p4.
-Proof. split; [vm_compute; reflexivity | reflexivity]. Qed.
+  decide line1_seaward = Lebanese /\ close_coord decree6433_p23 line23_seaward.
+Proof. split; [vm_compute; reflexivity | apply line23_endpoint_is_P4]. Qed.
 
 (* Line nesting at the seaward apex: Israel's Line 1 endpoint decides Lebanese
    (north of the agreed line) and Lebanon's Line 29 anchor decides Israeli
@@ -1291,7 +1352,7 @@ Extract Inductive bool => "bool" [ "true" "false" ].
 Extraction "naqoura.ml"
   decide clearance committed clearance_pos
   karish karish_north tanin qana_leb qana_isr point1_israel ras_naqoura
-  b1n b1s south_pole north_pole
+  b1n b1s south_pole north_pole israel_point34 israel_point35
   p1 p2 p3 p4.
 
 (******************************************************************************)
