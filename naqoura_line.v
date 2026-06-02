@@ -1332,10 +1332,53 @@ Proof.
   - exists qana_leb. split; [left; reflexivity | exact HL].
 Qed.
 
-(* Section 1E declares a permanent and equitable resolution.  UNCLOS Articles
-   74/83 require delimitation by agreement reaching an equitable solution; a
-   full equidistance comparison needs the coastal baseline points, out of scope
-   here, so we simply record the agreed line as the equitable delimitation. *)
+(* ----- UNCLOS Art. 74/83 reference geometry: equidistance on the sphere. -----
+   Articles 74 and 83 call for delimitation by agreement reaching an equitable
+   solution, with equidistance from the coasts the usual reference construction.
+   Equidistance between two basepoints A and B is exact rational geometry: for
+   unit directions the great-circle distance to A is acos (dot A X), strictly
+   decreasing in dot A X, so X is equidistant from A and B iff dot A X = dot B X,
+   and strictly nearer A iff dot A X > dot B X.  The equidistant locus is the
+   perpendicular-bisector great circle with normal A - B, separating the two
+   "nearer-to" half-spaces.  (Bridge.equidistant_real_meaning ties this to equal
+   great-circle distance over the reals.) *)
+Definition vsub (a b : Vec) : Vec := mkVec (vx a - vx b) (vy a - vy b) (vz a - vz b).
+Definition equidistant (a b X : Vec) : Prop := dot a X == dot b X.
+Definition nearer (a b X : Vec) : Prop := dot b X < dot a X.   (* X nearer A than B *)
+
+Lemma dot_vsub_l : forall a b X, dot (vsub a b) X == dot a X - dot b X.
+Proof. intros a b X. unfold vsub, dot; simpl. ring. Qed.
+
+Theorem equidistant_is_bisector : forall a b X,
+  equidistant a b X <-> dot (vsub a b) X == 0.
+Proof. intros a b X. unfold equidistant. rewrite dot_vsub_l. split; intro; lra. Qed.
+
+Theorem nearer_is_halfspace : forall a b X,
+  nearer a b X <-> 0 < dot (vsub a b) X.
+Proof. intros a b X. unfold nearer. rewrite dot_vsub_l. split; intro; lra. Qed.
+
+(* The bisector partitions the sphere: every position is nearer A, equidistant,
+   or nearer B -- exhaustively and exclusively. *)
+Theorem equidistance_trichotomy : forall a b X,
+  nearer a b X \/ equidistant a b X \/ nearer b a X.
+Proof.
+  intros a b X. unfold nearer, equidistant.
+  destruct (Qlt_le_dec (dot b X) (dot a X)) as [H|H].
+  - left; exact H.
+  - destruct (Qlt_le_dec (dot a X) (dot b X)) as [H2|H2].
+    + right; right; exact H2.
+    + right; left; apply Qle_antisym; assumption.
+Qed.
+
+(* Section 1E declares a permanent and equitable resolution; UNCLOS Articles
+   74/83 require delimitation by agreement reaching an equitable solution, for
+   which the equidistance geometry above is the reference construction.  The
+   agreed line is that equitable settlement, not a mechanical equidistance line:
+   it lies between Israel's equidistance-based Line 1 and Lebanon's Line 29
+   (mbl_between_line1_and_line29), each side certified.  We record the agreed
+   line as the equitable delimitation; a basepoint-level equidistance comparison
+   would need the parties' coastal low-water basepoints, which are not published
+   as coordinates. *)
 Definition equitable_delimitation : list Vec := annex_A.
 
 (* ----- Extraction: the geofence as runnable OCaml. ----- *)
@@ -1882,6 +1925,19 @@ Proof.
     first [ exact HY | exact Hbd
           | apply Qle_bool_iff; vm_compute; reflexivity
           | apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity ].
+Qed.
+
+(* Real meaning of the rational equidistance test: an equidistant position is at
+   equal great-circle distance from the two basepoints.  For unit directions the
+   angular distance to A is acos (dot A X); kernel equidistance (dot A X = dot B
+   X) makes the two angular distances, hence the two great-circle distances,
+   equal.  This is the UNCLOS Art. 74/83 equidistance criterion over the reals. *)
+Theorem equidistant_real_meaning : forall a b X,
+  equidistant a b X ->
+  acos (Rdot (RVof a) (RVof X)) = acos (Rdot (RVof b) (RVof X)).
+Proof.
+  intros a b X H. unfold equidistant in H.
+  rewrite <- !Q2R_dot. f_equal. apply Qeq_eqR. exact H.
 Qed.
 
 End Bridge.

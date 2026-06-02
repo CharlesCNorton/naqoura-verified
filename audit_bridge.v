@@ -38,3 +38,7 @@ Print Assumptions Bridge.qana_leb_distance_km.
 Print Assumptions Bridge.foot_on_circle.
 Print Assumptions Bridge.whole_boundary_far.
 Print Assumptions Bridge.karish_whole_boundary_km.
+
+(* UNCLOS Art. 74/83 equidistance: equidistant positions are at equal
+   great-circle distance from the two basepoints. *)
+Print Assumptions Bridge.equidistant_real_meaning.

@@ -119,6 +119,11 @@ Geometry of the line (kernel):
 - `decide_poly_total`, `decide_poly_sound`, `decide_poly_is_decide` - the
   four-point geofence is one instance of a generic fold over an arbitrary
   east-to-west boundary list, with totality and soundness proved generically.
+- `equidistant_is_bisector`, `nearer_is_halfspace`, `equidistance_trichotomy` -
+  the UNCLOS Article 74/83 equidistance geometry: the locus equidistant from two
+  basepoints is the perpendicular-bisector great circle (normal A - B), which
+  exactly splits the "nearer-A" and "nearer-B" half-spaces; an exact rational
+  test, since great-circle distance is monotone in the dot product.
 
 Features and lines (kernel):
 
@@ -190,6 +195,9 @@ Geometric soundness (bridge, classical reals):
   directly (the non-unit generalization removes the idealization).
 - `ecef_unit_is_unit` - the geodetic-to-ECEF embedding, in Coq's own sin/cos,
   produces unit vectors.
+- `equidistant_real_meaning` - an equidistant position (the rational test) is at
+  equal great-circle distance from the two basepoints over the reals (equal
+  `acos` of the dot products): the equidistance criterion of Articles 74/83.
 
 Coordinate provenance (classical reals plus primitive integers):
 

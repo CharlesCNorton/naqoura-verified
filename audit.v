@@ -74,6 +74,11 @@ Print Assumptions of_ecef_scale_free.
 Print Assumptions naqoura_section_2F.
 Print Assumptions prospect_straddle_no_unilateral.
 
+(* UNCLOS Art. 74/83 equidistance geometry (exact rational bisector). *)
+Print Assumptions equidistant_is_bisector.
+Print Assumptions nearer_is_halfspace.
+Print Assumptions equidistance_trichotomy.
+
 (* Orientation by the poles, longitude transitivity and deferral outside the
    agreed span, the deposit-crossing mechanism, segment-normal lower bounds. *)
 Print Assumptions positive_side_is_south.
