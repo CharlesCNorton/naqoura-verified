@@ -7,12 +7,15 @@ on the Israeli or Lebanese side of the agreed Maritime Boundary Line (MBL), with
 a certified clearance, and proves the legal geometry of the settlement: the
 straddling Qana prospect, the supersession of the parties' 2011 claim lines, the
 classification of the offshore gas fields, and the deferral of the near-shore
-segment. The development has two layers. The decision kernel is exact rational
-arithmetic, contains no axioms and no admitted lemmas, and extracts to OCaml. A
-real-geometry layer then interprets the kernel in genuine spherical geometry,
-proving what the rational verdict and clearance mean: the verdict is the sign of
-a real scalar triple product (a side-of-great-circle test), and a positive
-clearance is a real lower bound, in kilometres, on the distance to the boundary.
+segment. The decision kernel is exact rational arithmetic, contains no axioms
+and no admitted lemmas, and extracts to OCaml. A real-geometry layer then
+interprets the kernel in genuine spherical geometry, proving what the rational
+verdict and clearance mean: the verdict is the sign of a real scalar triple
+product (a side-of-great-circle test), and a positive clearance is a real lower
+bound, in kilometres, on the distance to the boundary. A third, separately
+audited layer machine-checks each agreed point's rational coordinates against
+the transcendental sine and cosine of its deposited degree-minute-second
+position, so the boundary data itself is verified inside Coq.
 
 **Author:** Charles C. Norton | June 2026 | License: MIT
 
@@ -60,8 +63,21 @@ verdict is a genuine orientation test; and, via a Cauchy-Schwarz / Gram-
 determinant argument, every point of a segment's great circle is at least
 `R_earth * arcsin(clearance / |n|)` away from the position
 (`boundary_far_from_position`), turning a positive clearance into a kilometre
-distance. This layer, and only this layer, uses Coq's standard real-number
-library (the classical-reals axioms); the kernel remains axiom-free.
+distance. This layer uses Coq's standard real-number library (the classical-reals
+axioms); the kernel remains axiom-free.
+
+**Coordinate provenance.** A separate layer (`provenance.v`) closes the one gap
+the rational certificates leave open: that each stored rational really is the
+embedding of its published coordinate. For all four agreed points it proves, to
+within `1e-12` on every component, that the rational matches the spherical ECEF
+embedding `(cos lat cos lon, cos lat sin lon, sin lat)` of the point's deposited
+degrees-minutes-seconds, with the latitude and longitude given as the exact
+`/360000` degree rationals of the DMS. The transcendental bound is discharged by
+CoqInterval's `interval` tactic (validated interval arithmetic with a Taylor
+model for sine and cosine). This pins the data to the geodetic formula inside
+Coq rather than only in Wolfram; it adds Coq's primitive-integer arithmetic
+(used by CoqInterval) to the trusted base, kept out of the kernel and bridge by
+confinement to this file.
 
 ## What is proven
 
@@ -121,10 +137,14 @@ Features and lines (kernel):
 - `crossing_deposit_not_unilateral` - a deposit with committed points on both
   sides cannot be taken wholly by either party (Section 2F in general form); the
   Qana prospect is the instance.
-- `shared_line`, `supersession`, `mbl_between_line1_and_line29`,
-  `endpoint_latitude_order` - the annexes are identical; Israel's Line 1 endpoint
-  lies on the Lebanese side of the agreed line; the agreed line lies between
-  Line 1 (north) and Lebanon's Line 29 (south), each side certified.
+- `shared_line`, `supersession`, `mbl_is_decree6433_line`,
+  `israel_2011_seaward_claim_now_lebanese`, `mbl_between_line1_and_line29`,
+  `endpoint_latitude_order` - the two annexes are identical; the four agreed
+  points are Lebanon's Decree 6433 points 20-23, cross-checked against an
+  independent embedding of the deposited coordinates to `1e-9`; Israel's whole
+  seaward 2011 claim (its deposited points 1, 34, 35) lies on the Lebanese side
+  of the agreed line; the line lies between Line 1 (north) and Lebanon's Line 29
+  (south), each side certified.
 - `cyprus_line_monotone_north`, `seaward_terminus_on_line`,
   `ras_naqoura_deferred` - the Cyprus-Lebanon line runs strictly northward; P4
   sits on the line with the tripoint deferred; the near-shore terminus is
@@ -171,6 +191,13 @@ Geometric soundness (bridge, classical reals):
 - `ecef_unit_is_unit` - the geodetic-to-ECEF embedding, in Coq's own sin/cos,
   produces unit vectors.
 
+Coordinate provenance (classical reals plus primitive integers):
+
+- `p1_matches_wgs84_dms`, `p2_matches_wgs84_dms`, `p3_matches_wgs84_dms`,
+  `p4_matches_wgs84_dms` - each agreed point's stored rational matches the
+  spherical ECEF embedding of its deposited degrees-minutes-seconds to within
+  `1e-12` on every component, the transcendental bound discharged by CoqInterval.
+
 ## Axiom status
 
 The rational kernel contains no axioms and no admitted lemmas. `audit.v` runs
@@ -183,6 +210,14 @@ The real-geometry bridge depends only on Coq's standard real-number axioms
 extensionality_dep`, `Classical_Prop.classic` - the assumptions behind the Coq
 `Reals` library); it introduces no project-specific axioms and no admitted
 lemmas. `audit_bridge.v` documents this footprint.
+
+The coordinate-provenance layer (`provenance.v`) depends on those same
+classical-reals axioms together with Coq's primitive 63-bit integer arithmetic
+(`PrimInt63` / `Uint63Axioms`), which CoqInterval uses for fast exact
+multi-precision computation. Those are part of Coq's native-arithmetic trusted
+base, realized by the OCaml runtime, not classical-logic axioms; they appear in
+no other file. `audit_provenance.v` documents this footprint. There are no
+project-specific axioms and no admitted lemmas anywhere in the development.
 
 ## Data and tolerances
 
@@ -206,23 +241,28 @@ matched in sign by the Coq verdicts):
 | Qana (Israel)  | Israeli  |  6.8 km   |
 | Qana (Lebanon) | Lebanese |  5.4 km   |
 
-Sourced exactly: the four agreed MBL points; Lebanon's Point 23 (equal to P4);
-Israel's Line 1 / Cyprus-Lebanon 2007 points 1-6; the Ras Naqoura land terminus.
-Sourced as operator/region positions: Karish, Karish North, Tanin. Line 29 was
-never formally deposited; it is anchored here by the Karish field it was drawn
-to split. Israel's near-shore points 34, 35 and Lebanon's points 20-22, and the
-exact Qana reservoir outline, were not in the public record consulted; the
-seaward endpoints carry the disputed geometry, and the prospect straddle is
+Sourced exactly from the primary UN deposits: the four agreed MBL points, which
+are Lebanon's Decree 6433 / MZN.85.2011 points 20-23 and the identical 2022
+Annex A / Annex B points; Israel's superseded deposit points 1, 34, 35 (its 2011
+DOALOS submission, Point 1 being the Cyprus-Israel 2010 Point 1); the
+Cyprus-Lebanon 2007 line; and the Ras Naqoura land terminus. Sourced as
+operator/region positions: Karish, Karish North, Tanin. Line 29 was never
+formally deposited (the 2021 decree amending Decree 6433 was left unsigned); it
+is anchored here by the Karish field it was drawn to split. The exact Qana
+reservoir outline is not in the public record; the prospect straddle is
 represented by points either side of the line in the Block 9 / Block 72 area.
 
 ## Build
 
-Requires Rocq/Coq 9 (`coqc`) and an OCaml native compiler (`ocamlopt`).
+Requires Rocq/Coq 9 (`coqc`), the CoqInterval library (`coq-interval`, used by
+the provenance layer), and an OCaml native compiler (`ocamlopt`).
 
 ```
 coqc naqoura_line.v        # checks all proofs and extracts naqoura.ml
+coqc provenance.v          # per-point WGS84 coordinate provenance (CoqInterval)
 coqc audit.v               # axiom audit of the rational kernel (all closed)
 coqc audit_bridge.v        # axiom footprint of the real-geometry bridge
+coqc audit_provenance.v    # axiom footprint of the provenance layer
 bash build.sh              # all of the above, plus the OCaml self-test
 ```
 
@@ -234,8 +274,10 @@ ellipsoidal model error.
 
 ```
 naqoura_line.v     the development: rational kernel, extraction, real bridge
+provenance.v       per-point WGS84 coordinate provenance (CoqInterval)
 audit.v            Print Assumptions over the rational kernel (all closed)
 audit_bridge.v     Print Assumptions over the real-geometry bridge
+audit_provenance.v Print Assumptions over the provenance layer
 selftest.ml        OCaml harness checking extracted verdicts vs the theorems
 build.sh           compile, audit, extract, build, self-test
 wolfram/derive.wl  coordinate provenance, geodesic and ellipsoidal cross-checks
