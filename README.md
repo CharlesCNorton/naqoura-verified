@@ -7,7 +7,12 @@ on the Israeli or Lebanese side of the agreed Maritime Boundary Line (MBL), with
 a certified clearance, and proves the legal geometry of the settlement: the
 straddling Qana prospect, the supersession of the parties' 2011 claim lines, the
 classification of the offshore gas fields, and the deferral of the near-shore
-segment. The development contains no axioms and no admitted lemmas.
+segment. The development has two layers. The decision kernel is exact rational
+arithmetic, contains no axioms and no admitted lemmas, and extracts to OCaml. A
+real-geometry layer then interprets the kernel in genuine spherical geometry,
+proving what the rational verdict and clearance mean: the verdict is the sign of
+a real scalar triple product (a side-of-great-circle test), and a positive
+clearance is a real lower bound, in kilometres, on the distance to the boundary.
 
 **Author:** Charles C. Norton | June 2026 | License: MIT
 
@@ -28,29 +33,39 @@ taking any deposit that crosses the line.
 
 ## Method
 
-The sphere is modeled in exact rational arithmetic. A position is a vector in
-`Q^3` (an ECEF / unit-sphere direction). The side of the line is the sign of a
-determinant: for a geodesic segment from `A` to `B`, a position `X` is on
-Lebanon's (north) side when `(A x B) . X < 0` and on Israel's (south) side when
-`(A x B) . X > 0`. Segment selection is by longitude band, itself an exact
-rational sign test against the meridian normals. Every classification is thus a
-finite exact rational computation, decided by `vm_compute`, and extracts to
-OCaml.
+**Rational kernel.** The sphere is modeled in exact rational arithmetic. A
+position is a vector in `Q^3` (an ECEF / unit-sphere direction). The side of the
+line is the sign of a determinant: for a geodesic segment from `A` to `B`, a
+position `X` is on Lebanon's (north) side when `(A x B) . X < 0` and on Israel's
+(south) side when `(A x B) . X > 0`. Segment selection is by longitude band,
+itself an exact rational sign test against the meridian normals. Every
+classification is a finite exact rational computation, decided by `vm_compute`,
+and extracts to OCaml.
 
 The only irrational data are the boundary and feature coordinates. These are
 converted from their published WGS84 geodetic positions to rational unit vectors
 once, in Wolfram (`wolfram/derive.wl`), each within `1.6e-13` of the true unit
-vector (sub-millimeter). That script also recomputes every verdict and clearance
-in this file by an independent Wolfram geodesy path (great-circle side test and
-distance), as a cross-check on the Coq results.
+vector (sub-millimeter). The data carries Coq certificates: every point is proved
+a unit vector to within `1e-12` on the squared norm (`near_unit`), and the three
+segment normals are proved nondegenerate. Because the verdict is the sign
+of a determinant linear in `X`, it is invariant under positive rescaling of `X`
+(`decide_scale_invariant`): a consumer need only supply the correct ECEF
+direction, not an exactly normalized vector.
 
-Because the verdict is the sign of a determinant that is linear in `X`, it is
-invariant under positive rescaling of `X` (`decide_scale_invariant`): a consumer
-need only supply the correct ECEF direction, not an exactly normalized vector.
+**Real-geometry bridge.** A closing layer (Coq `Module Bridge`) embeds the
+rational vectors into `R^3` via `Q2R` and proves the kernel sound against real
+spherical geometry: the rational determinant has the same sign as the real
+scalar triple product (`verdict_real_Israeli` / `verdict_real_Lebanese`), so the
+verdict is a genuine orientation test; and, via a Cauchy-Schwarz / Gram-
+determinant argument, every point of a segment's great circle is at least
+`R_earth * arcsin(clearance / |n|)` away from the position
+(`boundary_far_from_position`), turning a positive clearance into a kilometre
+distance. This layer, and only this layer, uses Coq's standard real-number
+library (the classical-reals axioms); the kernel remains axiom-free.
 
 ## What is proven
 
-Decision procedure:
+Decision procedure (kernel):
 
 - `decide_total`, `decide_Israeli_sound`, `decide_Lebanese_sound`,
   `decide_exclusive` - the geofence is total over the seaward extent and a
@@ -60,70 +75,115 @@ Decision procedure:
 - `decide_scale_invariant`, `of_ecef_scale_free` - the verdict depends only on
   direction; rounding the norm cannot change it.
 
-Geometry of the line:
+Boundary-data certificates (kernel):
 
-- `mbl_monotone_west` - longitude strictly decreases from P1 to P4.
+- `boundary_points_near_unit`, `feature_points_near_unit` - every boundary and
+  feature point is a unit vector to within `1e-12` on the squared norm.
+- `nseg_nondegenerate` - the three segment normals are nonzero.
+
+Geometry of the line (kernel):
+
+- `mbl_monotone_west`, `mbl_is_west_chain` - longitude strictly decreases P1 to
+  P4 (the MBL is a monotone west-chain).
 - `bands_cover` - the three longitude bands tile the seaward span with no gaps.
-- `bands_share_only_p2`, `bands_share_only_p3` - adjacent bands meet only on a
-  shared meridian, so the segments are interior-disjoint (the line is simple).
+- `bands_share_only_p2`, `bands_share_only_p3`, and the generic
+  `bands_meet_on_shared` - adjacent bands meet only on a shared meridian, so the
+  segments are interior-disjoint (the line is simple); the concrete facts are
+  instances of the generic one.
 - `decide_band1_indeterminate_iff` - within a band, Indeterminate holds exactly
   on the segment's great circle.
 - `decide_poly_total`, `decide_poly_sound`, `decide_poly_is_decide` - the
-  hand-unrolled four-point geofence is one instance of a generic fold over an
-  arbitrary east-to-west list of boundary points, with totality and soundness
-  proved generically.
+  four-point geofence is one instance of a generic fold over an arbitrary
+  east-to-west boundary list, with totality and soundness proved generically.
 
-Features and lines:
+Features and lines (kernel):
 
 - `karish_israeli`, `karish_north_israeli`, `tanin_israeli`,
   `israeli_fields_off_line` - the Karish, Karish North and Tanin gas fields lie
   on the Israeli side, off the line.
-- `qana_straddles`, `qana_well_lebanese` - the Qana/Sidon prospect has committed
-  points on both sides; the 31/1B well, drilled in Block 9, is Lebanese-side.
+- `qana_straddles`, `qana_well_lebanese`, `prospect_straddle_no_unilateral` -
+  the Qana/Sidon prospect has committed points on both sides; the 31/1B well,
+  drilled in Block 9, is Lebanese-side; and neither party's side contains the
+  whole prospect, so a unilateral taking would cross the line (Section 2F).
 - `orientation_consistent` - on every segment the Israeli side is the positive
   side and the Lebanese side the negative side.
-- `shared_line` - Lebanon's Annex A and Israel's Annex B points are identical.
-- `supersession` - Israel's former Line 1 seaward endpoint now lies on the
-  Lebanese side of the agreed line; Lebanon's Point 23 is retained as P4.
-- `mbl_between_line1_and_line29`, `endpoint_latitude_order` - the agreed line
-  lies strictly between Israel's Line 1 (north) and Lebanon's Line 29 (south,
-  anchored by the Karish field it would have split), each side certified.
-- `cyprus_line_monotone_north`, `seaward_terminus_on_line` - the Cyprus-Lebanon
-  line runs strictly northward; P4 sits on the line with the trilateral
-  tripoint deferred.
-- `ras_naqoura_deferred` - the near-shore terminus is Indeterminate (the
-  undelimited buoy line).
+- `shared_line`, `supersession`, `mbl_between_line1_and_line29`,
+  `endpoint_latitude_order` - the annexes are identical; Israel's Line 1 endpoint
+  lies on the Lebanese side of the agreed line; the agreed line lies between
+  Line 1 (north) and Lebanon's Line 29 (south), each side certified.
+- `cyprus_line_monotone_north`, `seaward_terminus_on_line`,
+  `ras_naqoura_deferred` - the Cyprus-Lebanon line runs strictly northward; P4
+  sits on the line with the tripoint deferred; the near-shore terminus is
+  Indeterminate.
 
-Robustness and structure:
+Robustness and rounding (kernel):
 
 - `sign_robust_Gt`, `sign_robust_Lt`, `verdict_robust_Israeli`,
   `verdict_robust_Lebanese` - a committed verdict survives any perturbation of
   the side determinant smaller than the clearance (the error envelope).
-- `clearance_exceeds_rounding_budget`, `karish_rounding_robust` - every
-  committed feature's clearance exceeds the rational rounding budget by orders
-  of magnitude, so rounding can never flip a verdict.
-- `nseg_norm_bounds` - rational upper bounds on the segment normals, linking the
-  clearance to an angular (and hence kilometre) distance; the exact kilometre
-  clearances are tabulated independently in `wolfram/derive.wl`.
-- `naqoura_section_2F` - the agreement's Prospect arrangement (Section 2F),
-  encoded as the genuine straddle of the line by the prospect.
+- `dot_diff_abs_bound`, `rounding_propagation_within_budget`, `side_det_robust`,
+  `karish_query_robust`, `point1_query_robust` - the side determinant is
+  Lipschitz in the position; the coordinate rounding budget (1.3e-13) propagates
+  to a determinant perturbation below `rounding_det_budget`, and rounding the
+  query coordinates cannot flip a committed feature.
+- `clearance_exceeds_rounding_budget`, `committed_robust_to_model_and_rounding` -
+  every committed feature's clearance exceeds the rounding budget, and exceeds
+  the combined model+rounding budget (`model_det_budget` = 1e-7), so neither the
+  spherical model nor the rational rounding can flip a committed verdict.
+- `nseg_norm_bounds` - tight rational upper bounds on the segment normals,
+  linking the clearance to an angular (and hence kilometre) distance.
+
+Geometric soundness (bridge, classical reals):
+
+- `Q2R_dot`, `verdict_real_Israeli`, `verdict_real_Lebanese` - the rational
+  verdict is exactly the sign of the real scalar triple product of the embedded
+  vectors: a genuine orientation / side-of-great-circle test.
+- `dot_circle_bound`, `boundary_far_from_position` - via a Cauchy-Schwarz / Gram
+  argument, every point of a segment's great circle is at least
+  `R_earth * arcsin(clearance / |n|)` from the position; a positive clearance is
+  a real kilometre lower bound on the distance to the boundary.
+- `decide_Israeli_real_meaning`, `decide_Lebanese_real_meaning` - the precise
+  meaning of a committed verdict: it is exactly an active longitude band plus the
+  correct sign of that segment's real triple product. It does not assert "X is
+  in country Y's waters", only "X is south/north of that segment's great circle
+  within the band".
+- `karish_min_distance_km` - the boundary lies at least `R_earth * (216/100000)`
+  ~ 13.7 km from the Karish field's unit position (Wolfram geodesy: 14.2 km).
 
 ## Axiom status
 
-The development contains no axioms and no admitted lemmas. `audit.v` runs
-`Print Assumptions` over every theorem; each reports *Closed under the global
-context*. The geofence and clearance extract to runnable OCaml, and `selftest.ml`
-checks that the extracted verdicts match the Coq theorems.
+The rational kernel contains no axioms and no admitted lemmas. `audit.v` runs
+`Print Assumptions` over all 49 kernel theorems; each reports *Closed under the
+global context*. The geofence and clearance extract to runnable OCaml, and
+`selftest.ml` checks that the extracted verdicts match the Coq theorems.
+
+The real-geometry bridge depends only on Coq's standard real-number axioms
+(`ClassicalDedekindReals.sig_forall_dec`, `sig_not_dec`, `functional_
+extensionality_dep`, `Classical_Prop.classic` - the assumptions behind the Coq
+`Reals` library); it introduces no project-specific axioms and no admitted
+lemmas. `audit_bridge.v` documents this footprint.
 
 ## Data and tolerances
 
-All coordinates are WGS84. Rational unit vectors are within `1.6e-13` of the
-true unit vector. The model is a sphere; the geodetic-to-unit embedding is
-applied identically to the boundary and to every feature, so the relative side
-test is preserved up to a small second-order term, which the kilometre-scale
-clearances of the named fields dominate. The Qana prospect lies within a few
-kilometres of the line, which is why the agreement shares it rather than
-assigning it.
+All coordinates are WGS84. Rational unit vectors are within `1.6e-13` of the true
+unit vector, and this is certified inside Coq to `1e-12` on the squared norm. The
+kernel models a sphere; `wolfram/derive.wl` recomputes each committed feature's
+side determinant on the full WGS84 ellipsoid and confirms it shares sign with the
+spherical determinant and differs by at most `6.5e-8`, which is below every
+committed feature's clearance (smallest, Qana, is `2.1e-6`). Hence
+`committed_robust_to_model_and_rounding` discharges the model+rounding envelope.
+
+Kilometre clearances of the named features to the boundary (Wolfram geodesy,
+matched in sign by the Coq verdicts):
+
+| feature        | side     | clearance |
+|----------------|----------|-----------|
+| Tanin          | Israeli  | 35.1 km   |
+| Point 1 (2011) | Lebanese | 15.9 km   |
+| Karish         | Israeli  | 14.2 km   |
+| Karish North   | Israeli  |  9.3 km   |
+| Qana (Israel)  | Israeli  |  6.8 km   |
+| Qana (Lebanon) | Lebanese |  5.4 km   |
 
 Sourced exactly: the four agreed MBL points; Lebanon's Point 23 (equal to P4);
 Israel's Line 1 / Cyprus-Lebanon 2007 points 1-6; the Ras Naqoura land terminus.
@@ -131,7 +191,7 @@ Sourced as operator/region positions: Karish, Karish North, Tanin. Line 29 was
 never formally deposited; it is anchored here by the Karish field it was drawn
 to split. Israel's near-shore points 34, 35 and Lebanon's points 20-22, and the
 exact Qana reservoir outline, were not in the public record consulted; the
-seaward endpoints carry the disputed geometry and the prospect straddle is
+seaward endpoints carry the disputed geometry, and the prospect straddle is
 represented by points either side of the line in the Block 9 / Block 72 area.
 
 ## Build
@@ -140,22 +200,24 @@ Requires Rocq/Coq 9 (`coqc`) and an OCaml native compiler (`ocamlopt`).
 
 ```
 coqc naqoura_line.v        # checks all proofs and extracts naqoura.ml
-coqc audit.v               # prints the axiom audit
+coqc audit.v               # axiom audit of the rational kernel (all closed)
+coqc audit_bridge.v        # axiom footprint of the real-geometry bridge
 bash build.sh              # all of the above, plus the OCaml self-test
 ```
 
 `wolfram/derive.wl` (WolframScript) re-derives every rational constant from its
-geodetic source and independently cross-checks every verdict and clearance.
+geodetic source and independently cross-checks every verdict, clearance, and the
+ellipsoidal model error.
 
 ## Files
 
 ```
-naqoura_line.v     the development (definitions, theorems, extraction)
-audit.v            Print Assumptions audit over every theorem
+naqoura_line.v     the development: rational kernel, extraction, real bridge
+audit.v            Print Assumptions over the rational kernel (all closed)
+audit_bridge.v     Print Assumptions over the real-geometry bridge
 selftest.ml        OCaml harness checking extracted verdicts vs the theorems
 build.sh           compile, audit, extract, build, self-test
-wolfram/derive.wl  coordinate provenance and independent geodesic cross-check
-TODO.md            (none remaining)
+wolfram/derive.wl  coordinate provenance, geodesic and ellipsoidal cross-checks
 ```
 
 ## Citations

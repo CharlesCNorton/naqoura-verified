@@ -1,0 +1,23 @@
+(* Axiom audit of the real-geometry bridge (Module Bridge in naqoura_line.v).
+   These theorems interpret the rational geofence in spherical geometry over
+   Coq's classical reals, so they depend on the standard real-number axioms of
+   the Coq/Rocq Reals library (e.g. the completeness/total-order axioms behind
+   R, sin, cos, asin, acos, sqrt).  They contain NO project-specific axioms and
+   NO admitted lemmas: the only assumptions are those of the standard library.
+   Run:  coqc naqoura_line.v && coqc audit_bridge.v *)
+
+Require Import naqoura_line.
+
+(* Q2R homomorphism and the verdict-as-real-triple-product sign agreement. *)
+Print Assumptions Bridge.Q2R_dot.
+Print Assumptions Bridge.verdict_real_Israeli.
+Print Assumptions Bridge.verdict_real_Lebanese.
+
+(* Cauchy-Schwarz / Gram distance bound and the kilometre clearance. *)
+Print Assumptions Bridge.dot_circle_bound.
+Print Assumptions Bridge.boundary_far_from_position.
+Print Assumptions Bridge.karish_min_distance_km.
+
+(* Precise geometric meaning of a committed verdict. *)
+Print Assumptions Bridge.decide_Israeli_real_meaning.
+Print Assumptions Bridge.decide_Lebanese_real_meaning.

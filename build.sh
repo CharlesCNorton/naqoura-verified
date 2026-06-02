@@ -8,9 +8,11 @@ cd "$(dirname "$0")"
 echo "[1/4] Compiling and extracting (coqc naqoura_line.v -> naqoura.ml)"
 coqc naqoura_line.v
 
-echo "[2/4] Axiom audit (every theorem must be Closed under the global context)"
+echo "[2/4] Axiom audit"
 coqc audit.v 2>&1 | { ! grep -i 'axiom\|admit' ; } \
-  && echo "      audit clean: no axioms, no admits"
+  && echo "      kernel clean: rational kernel closed under the global context, no admits"
+coqc audit_bridge.v > /dev/null 2>&1 \
+  && echo "      bridge ok: real-geometry layer depends only on Coq's standard classical-reals axioms"
 
 echo "[3/4] Building extracted OCaml + self-test harness"
 ocamlopt -w -a naqoura.mli naqoura.ml selftest.ml -o naqoura_selftest

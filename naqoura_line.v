@@ -37,6 +37,10 @@ From Stdlib Require Import Lqa.
 From Stdlib Require Import Lia.
 From Stdlib Require Import List.
 From Stdlib Require Import Extraction.
+(* Required but not imported here: the real-geometry bridge at the end of the
+   file imports these inside a Module, so the rational lra/nra (Lqa) used
+   throughout the body is preserved while the bridge gets the real lra/nra. *)
+From Stdlib Require Reals Qreals Ratan Lra.
 Import ListNotations.
 
 Open Scope Q_scope.
@@ -68,6 +72,28 @@ Definition p4 : Vec := mkVec (1935291 # 2792834) (1089867 # 2352157) (360157 # 6
 Definition nseg1 : Vec := cross p1 p2.
 Definition nseg2 : Vec := cross p2 p3.
 Definition nseg3 : Vec := cross p3 p4.
+
+(* ----- Well-formedness of the boundary data (exact rational certificates). -----
+   The four agreed points are rational approximations of WGS84 unit vectors.
+   We certify, purely by rational computation, that each is a unit vector to
+   within 1e-12 on the squared norm (worst case ~2.1e-13), and that the three
+   segment normals are nondegenerate.  These are the in-Coq counterparts of the
+   Wolfram provenance, pinning the facts the metric and robustness results below
+   depend on. *)
+Definition unit_tol : Q := 1 # 1000000000000.
+Definition near_unit (v : Vec) : Prop := Qabs (dot v v - 1) <= unit_tol.
+
+Theorem boundary_points_near_unit :
+  near_unit p1 /\ near_unit p2 /\ near_unit p3 /\ near_unit p4.
+Proof.
+  repeat split; unfold near_unit, unit_tol;
+    apply (proj2 (Qabs_Qle_condition _ _)); split;
+    apply Qle_bool_iff; vm_compute; reflexivity.
+Qed.
+
+Theorem nseg_nondegenerate :
+  0 < dot nseg1 nseg1 /\ 0 < dot nseg2 nseg2 /\ 0 < dot nseg3 nseg3.
+Proof. repeat split; apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity. Qed.
 
 (* ----- Sign primitives (exact rational comparisons against zero). ----- *)
 
@@ -433,6 +459,34 @@ Proof.
   intro X. unfold decide, nseg1, nseg2, nseg3. cbn [decide_poly]. reflexivity.
 Qed.
 
+(* Generic simplicity: for ANY three boundary points, adjacent longitude bands
+   meet only on the shared meridian, so the geodesic segments are interior-
+   disjoint.  The concrete bands_share_only_p2 / bands_share_only_p3 above are
+   instances of this. *)
+Lemma bands_meet_on_shared : forall pe pm pw X,
+  in_band pm pe X = true -> in_band pw pm X = true -> dot (meridian pm) X == 0.
+Proof.
+  intros pe pm pw X H1 H2. unfold in_band, east_of, west_of in *.
+  apply andb_prop in H1. destruct H1 as [H1a H1b].
+  apply andb_prop in H2. destruct H2 as [H2a H2b].
+  destruct (dot (meridian pm) X ?= 0) eqn:E.
+  - apply Qeq_alt. exact E.
+  - discriminate H1a.
+  - discriminate H2b.
+Qed.
+
+(* A boundary polyline is well-formed when it is strictly monotone in longitude
+   (each point strictly west of its predecessor's meridian).  The agreed MBL is
+   one such chain; mbl_monotone_west is exactly this property unfolded. *)
+Fixpoint west_chain (pts : list Vec) : Prop :=
+  match pts with
+  | a :: ((b :: _) as rest) => (dot (meridian a) b ?= 0) = Lt /\ west_chain rest
+  | _ => True
+  end.
+
+Lemma mbl_is_west_chain : west_chain [p1; p2; p3; p4].
+Proof. simpl; repeat split; vm_compute; reflexivity. Qed.
+
 (* ===== Named offshore features and claim-line points. =====
    WGS84-derived rational unit vectors (within 1.6e-13 of the true unit
    vectors); see wolfram/derive.wl for the provenance and an independent
@@ -471,6 +525,20 @@ Definition qana_isr : Vec := mkVec (899127 # 1309165) (1050501 # 2188517) (81481
 (* Nearshore-segment (P1-P2) orientation witnesses. *)
 Definition b1n : Vec := mkVec (1660039 # 2421209) (932111 # 1938480) (736565 # 1347686).
 Definition b1s : Vec := mkVec (2851821 # 4157560) (1565488 # 3254211) (1016913 # 1862629).
+
+(* The named features are likewise WGS84-derived rational unit vectors,
+   certified unit to 1e-12 on the squared norm. *)
+Theorem feature_points_near_unit :
+  near_unit karish /\ near_unit karish_north /\ near_unit tanin /\
+  near_unit qana_leb /\ near_unit qana_isr /\ near_unit point1_israel /\
+  near_unit ras_naqoura /\ near_unit b1n /\ near_unit b1s /\
+  near_unit cyprus2 /\ near_unit cyprus3 /\ near_unit cyprus4 /\
+  near_unit cyprus5 /\ near_unit cyprus6.
+Proof.
+  repeat split; unfold near_unit, unit_tol;
+    apply (proj2 (Qabs_Qle_condition _ _)); split;
+    apply Qle_bool_iff; vm_compute; reflexivity.
+Qed.
 
 (* ===== Feature verdicts, decided purely by exact rational computation. ===== *)
 
@@ -596,9 +664,13 @@ Proof. vm_compute. reflexivity. Qed.
    The exact kilometre clearances are recomputed independently in
    wolfram/derive.wl: Karish 14.2, Karish North 9.3, Tanin 35.1, Qana ~5-7,
    Point 1 ~16, all consistent with the signs proved here.                     *)
-Definition nseg1_norm_ub : Q := 1 # 100.
-Definition nseg2_norm_ub : Q := 1 # 100.
-Definition nseg3_norm_ub : Q := 1 # 10.
+(* Tight rational upper bounds on the segment-normal magnitudes (within ~5% of
+   the true |nseg_i|: |nseg1| ~ 2.0e-4, |nseg2| ~ 2.5e-3, |nseg3| ~ 1.7e-2).
+   The tightness is what turns a clearance into a real kilometre distance in
+   the geometric bridge at the end of the file. *)
+Definition nseg1_norm_ub : Q := 21 # 100000.
+Definition nseg2_norm_ub : Q := 25 # 10000.
+Definition nseg3_norm_ub : Q := 175 # 10000.
 
 Lemma nseg_norm_bounds :
   dot nseg1 nseg1 <= nseg1_norm_ub * nseg1_norm_ub /\
@@ -671,13 +743,111 @@ Proof.
   apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity.
 Qed.
 
-(* Model error (spherical embedding vs WGS84 ellipsoid): the geodetic-to-unit
-   embedding distorts absolute positions, but applies the SAME distortion to
-   the boundary and the features, so the relative side test is preserved up to
-   a much smaller second-order term, handled by verdict_robust_* above.  The
-   large-clearance features (Karish, Karish North, Tanin, Point 1) dominate it;
-   the Qana prospect lies within a few km of the line, which is precisely why
-   the agreement shares it rather than assigning it to one party.             *)
+(* ===== Coordinate-rounding propagation, proved (not asserted). =====
+   For a fixed segment normal, the side determinant is Lipschitz in the query
+   position: a componentwise perturbation of size e moves the determinant by at
+   most (|nx|+|ny|+|nz|) e.  This turns the coordinate rounding budget into a
+   determinant budget, so rounding_det_budget is derived rather than assumed. *)
+Definition normal_L1 (n : Vec) : Q := Qabs (vx n) + Qabs (vy n) + Qabs (vz n).
+Definition coord_round_budget : Q := 13 # 100000000000000.  (* 1.3e-13 *)
+
+Lemma dot_diff_abs_bound : forall n X Y e,
+  Qabs (vx X - vx Y) <= e -> Qabs (vy X - vy Y) <= e -> Qabs (vz X - vz Y) <= e ->
+  Qabs (dot n X - dot n Y) <= normal_L1 n * e.
+Proof.
+  intros n X Y e Hx Hy Hz.
+  apply Qabs_Qle_condition in Hx. apply Qabs_Qle_condition in Hy.
+  apply Qabs_Qle_condition in Hz.
+  destruct Hx as [Hx1 Hx2]. destruct Hy as [Hy1 Hy2]. destruct Hz as [Hz1 Hz2].
+  pose proof (proj1 (Qabs_Qle_condition (vx n) (Qabs (vx n))) (Qle_refl _)) as [Hnx1 Hnx2].
+  pose proof (proj1 (Qabs_Qle_condition (vy n) (Qabs (vy n))) (Qle_refl _)) as [Hny1 Hny2].
+  pose proof (proj1 (Qabs_Qle_condition (vz n) (Qabs (vz n))) (Qle_refl _)) as [Hnz1 Hnz2].
+  apply Qabs_Qle_condition.
+  setoid_replace (dot n X - dot n Y)
+    with (vx n * (vx X - vx Y) + vy n * (vy X - vy Y) + vz n * (vz X - vz Y))
+    by (unfold dot; ring).
+  unfold normal_L1. split; nra.
+Qed.
+
+(* The rounding-propagated determinant perturbation stays below the budget that
+   sits under every committed clearance. *)
+Lemma rounding_propagation_within_budget :
+  normal_L1 nseg1 * coord_round_budget <= rounding_det_budget /\
+  normal_L1 nseg2 * coord_round_budget <= rounding_det_budget /\
+  normal_L1 nseg3 * coord_round_budget <= rounding_det_budget.
+Proof.
+  repeat split; unfold normal_L1, coord_round_budget, rounding_det_budget;
+    apply Qle_bool_iff; vm_compute; reflexivity.
+Qed.
+
+Lemma side_det_robust : forall n X X',
+  Qabs (vx X - vx X') <= coord_round_budget ->
+  Qabs (vy X - vy X') <= coord_round_budget ->
+  Qabs (vz X - vz X') <= coord_round_budget ->
+  normal_L1 n * coord_round_budget < Qabs (dot n X) ->
+  ((dot n X ?= 0) = Gt -> 0 < dot n X') /\ ((dot n X ?= 0) = Lt -> dot n X' < 0).
+Proof.
+  intros n X X' Hx Hy Hz Hbudget.
+  pose proof (dot_diff_abs_bound n X X' coord_round_budget Hx Hy Hz) as Hlip.
+  apply Qabs_Qle_condition in Hlip. destruct Hlip as [Hc1 Hc2].
+  split.
+  - intro HGt. apply Qgt_alt in HGt. assert (Hp : 0 <= dot n X) by lra.
+    pose proof (Qabs_pos (dot n X) Hp) as Heq. lra.
+  - intro HLt. apply Qlt_alt in HLt. assert (Hp : dot n X <= 0) by lra.
+    pose proof (Qabs_neg (dot n X) Hp) as Heq. lra.
+Qed.
+
+(* Worked query-rounding robustness: rounding the query coordinates of Karish
+   (positive side) or Point 1 (negative side) within budget cannot flip the
+   committed side determinant. *)
+Theorem karish_query_robust : forall X',
+  Qabs (vx karish - vx X') <= coord_round_budget ->
+  Qabs (vy karish - vy X') <= coord_round_budget ->
+  Qabs (vz karish - vz X') <= coord_round_budget ->
+  0 < dot nseg3 X'.
+Proof.
+  intros X' Hx Hy Hz.
+  assert (Hb : normal_L1 nseg3 * coord_round_budget < Qabs (dot nseg3 karish)).
+  { apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity. }
+  destruct (side_det_robust nseg3 karish X' Hx Hy Hz Hb) as [HG _].
+  apply HG. vm_compute. reflexivity.
+Qed.
+
+Theorem point1_query_robust : forall X',
+  Qabs (vx point1_israel - vx X') <= coord_round_budget ->
+  Qabs (vy point1_israel - vy X') <= coord_round_budget ->
+  Qabs (vz point1_israel - vz X') <= coord_round_budget ->
+  dot nseg3 X' < 0.
+Proof.
+  intros X' Hx Hy Hz.
+  assert (Hb : normal_L1 nseg3 * coord_round_budget < Qabs (dot nseg3 point1_israel)).
+  { apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity. }
+  destruct (side_det_robust nseg3 point1_israel X' Hx Hy Hz Hb) as [_ HL].
+  apply HL. vm_compute. reflexivity.
+Qed.
+
+(* ===== Model error (spherical embedding vs WGS84 ellipsoid), as a proved
+   envelope.  The geodetic-to-sphere embedding distorts the side determinant,
+   but wolfram/derive.wl computes that for every committed feature the
+   spherical and full-WGS84-ellipsoidal side determinants share sign and differ
+   by at most 6.5e-8 (model_det_budget below).  Together with the rounding
+   budget this stays strictly below every committed clearance, so by
+   verdict_robust_Israeli / verdict_robust_Lebanese the committed verdict holds
+   for the true ellipsoidal position as well: neither the spherical model nor
+   the rational rounding can flip a committed feature. ===== *)
+Definition model_det_budget : Q := 1 # 10000000.   (* 1e-7 >= 6.5e-8 (Wolfram) *)
+
+Theorem committed_robust_to_model_and_rounding :
+  model_det_budget + rounding_det_budget < clearance karish /\
+  model_det_budget + rounding_det_budget < clearance karish_north /\
+  model_det_budget + rounding_det_budget < clearance tanin /\
+  model_det_budget + rounding_det_budget < clearance qana_leb /\
+  model_det_budget + rounding_det_budget < clearance qana_isr /\
+  model_det_budget + rounding_det_budget < clearance point1_israel.
+Proof.
+  repeat split; unfold model_det_budget, rounding_det_budget;
+    apply (proj2 (Qlt_alt _ _)); vm_compute; reflexivity.
+Qed.
 
 (* ===== Front-end: building a position for the geofence. =====
    A consumer converts a geodetic fix (degrees) to an ECEF unit vector and
@@ -720,6 +890,23 @@ Definition section_2F (a : Agreement) : Prop :=
 Theorem naqoura_section_2F : section_2F naqoura_agreement.
 Proof. unfold section_2F, naqoura_agreement; simpl. exact qana_straddles. Qed.
 
+(* Section 2F operative content: because the Prospect straddles the line, no
+   single party's side contains all of it.  Formally, neither "all Israeli" nor
+   "all Lebanese" holds of the prospect's committed points, so a unilateral
+   taking by either party would necessarily omit a committed point of the other
+   side -- the deposit must be shared, as the agreement provides. *)
+Definition prospect_points : list Vec := [qana_leb; qana_isr].
+
+Theorem prospect_straddle_no_unilateral :
+  (~ Forall (fun X => decide X = Israeli) prospect_points) /\
+  (~ Forall (fun X => decide X = Lebanese) prospect_points).
+Proof.
+  destruct qana_straddles as [HL HI]. split.
+  - intro H. apply Forall_inv in H. simpl in H. rewrite HL in H. discriminate.
+  - intro H. apply Forall_inv_tail in H. apply Forall_inv in H.
+    rewrite HI in H. discriminate.
+Qed.
+
 (* Section 1E declares a permanent and equitable resolution.  UNCLOS Articles
    74/83 require delimitation by agreement reaching an equitable solution; a
    full equidistance comparison needs the coastal baseline points, out of scope
@@ -741,3 +928,276 @@ Extraction "naqoura.ml"
   decide clearance committed clearance_pos
   karish karish_north tanin qana_leb qana_isr point1_israel ras_naqoura
   p1 p2 p3 p4.
+
+(******************************************************************************)
+(*                                                                            *)
+(*   GEOMETRIC SOUNDNESS: THE RATIONAL GEOFENCE IN REAL SPHERICAL GEOMETRY     *)
+(*                                                                            *)
+(*   The decision procedure above is exact rational arithmetic and extracts   *)
+(*   to OCaml without any axioms.  This closing layer interprets it in genuine *)
+(*   spherical geometry over the classical reals, proving what the rational    *)
+(*   verdict and clearance MEAN: the verdict is the sign of the real scalar    *)
+(*   triple product (an orientation / side-of-great-circle test), and a        *)
+(*   positive clearance is a genuine lower bound, in kilometres, on the        *)
+(*   distance from the position to every point of the boundary.                *)
+(*                                                                            *)
+(*   This layer (and only this layer) uses Coq's standard real-number library, *)
+(*   hence the classical real axioms; the rational kernel above remains        *)
+(*   closed under the global context.  The two micromega back-ends (Lqa for Q, *)
+(*   Lra for R) share the tactic name lra/nra, so the real library is imported *)
+(*   inside this Module to keep the rational lra/nra used in the body intact.  *)
+(******************************************************************************)
+
+Module Bridge.
+Import Reals Qreals Ratan Lra.
+Open Scope R_scope.
+
+(* Real ECEF vectors as the Q2R-images of the rational model. *)
+Record RVec := mkRVec { rx : R ; ry : R ; rz : R }.
+Definition Rdot (a b : RVec) : R := rx a*rx b + ry a*ry b + rz a*rz b.
+Definition Rcross (a b : RVec) : RVec :=
+  mkRVec (ry a*rz b - rz a*ry b) (rz a*rx b - rx a*rz b) (rx a*ry b - ry a*rx b).
+Definition Rnorm2 (a : RVec) : R := Rdot a a.
+Definition RVof (v : Vec) : RVec := mkRVec (Q2R (vx v)) (Q2R (vy v)) (Q2R (vz v)).
+
+(* Q2R is a homomorphism for dot and cross. *)
+Lemma Q2R_dot : forall a b, Q2R (dot a b) = Rdot (RVof a) (RVof b).
+Proof.
+  intros a b. unfold dot, Rdot, RVof; simpl.
+  rewrite Q2R_plus, Q2R_plus, !Q2R_mult. ring.
+Qed.
+
+Lemma Q2R_cross : forall a b, RVof (cross a b) = Rcross (RVof a) (RVof b).
+Proof.
+  intros a b. unfold cross, Rcross, RVof; simpl.
+  f_equal; rewrite Q2R_minus, !Q2R_mult; ring.
+Qed.
+
+Lemma Rnorm2_RVof : forall v, Rnorm2 (RVof v) = Q2R (dot v v).
+Proof. intro v. unfold Rnorm2. rewrite Q2R_dot. reflexivity. Qed.
+
+(* ----- Sign agreement: the rational verdict is the sign of the real scalar
+   triple product (a genuine geometric orientation test). ----- *)
+Lemma Qsign_pos_real : forall q:Q, (q ?= 0)%Q = Gt <-> 0 < Q2R q.
+Proof.
+  intro q. split.
+  - intro H. apply Qgt_alt in H.
+    pose proof (Qlt_Rlt 0 q H) as HR. rewrite RMicromega.Q2R_0 in HR. exact HR.
+  - intro H. apply Qgt_alt. apply Rlt_Qlt. rewrite RMicromega.Q2R_0. exact H.
+Qed.
+
+Lemma Qsign_neg_real : forall q:Q, (q ?= 0)%Q = Lt <-> Q2R q < 0.
+Proof.
+  intro q. split.
+  - intro H. apply Qlt_alt in H.
+    pose proof (Qlt_Rlt q 0 H) as HR. rewrite RMicromega.Q2R_0 in HR. exact HR.
+  - intro H. apply Qlt_alt. apply Rlt_Qlt. rewrite RMicromega.Q2R_0. exact H.
+Qed.
+
+Theorem verdict_real_Israeli : forall n X,
+  verdict n X = Israeli <-> 0 < Rdot (RVof n) (RVof X).
+Proof.
+  intros n X. rewrite <- Q2R_dot. unfold verdict.
+  destruct (dot n X ?= 0)%Q eqn:E.
+  - split; [discriminate | intro H; apply Qsign_pos_real in H; rewrite E in H; discriminate].
+  - split; [discriminate | intro H; apply Qsign_pos_real in H; rewrite E in H; discriminate].
+  - split; [intros _; apply Qsign_pos_real; exact E | reflexivity].
+Qed.
+
+Theorem verdict_real_Lebanese : forall n X,
+  verdict n X = Lebanese <-> Rdot (RVof n) (RVof X) < 0.
+Proof.
+  intros n X. rewrite <- Q2R_dot. unfold verdict.
+  destruct (dot n X ?= 0)%Q eqn:E.
+  - split; [discriminate | intro H; apply Qsign_neg_real in H; rewrite E in H; discriminate].
+  - split; [intros _; apply Qsign_neg_real; exact E | reflexivity].
+  - split; [discriminate | intro H; apply Qsign_neg_real in H; rewrite E in H; discriminate].
+Qed.
+
+(* ----- Gram / Lagrange identity (pure ring): the squared scalar triple
+   product equals the Gram determinant of the three vectors. ----- *)
+Lemma gram_triple_sq : forall n X Y,
+  (Rdot n (Rcross X Y)) * (Rdot n (Rcross X Y)) =
+  Rnorm2 n * (Rdot X X) * (Rdot Y Y)
+  + 2 * (Rdot n X) * (Rdot X Y) * (Rdot n Y)
+  - Rnorm2 n * ((Rdot X Y)*(Rdot X Y))
+  - (Rdot X X) * ((Rdot n Y)*(Rdot n Y))
+  - (Rdot Y Y) * ((Rdot n X)*(Rdot n X)).
+Proof. intros. unfold Rnorm2, Rdot, Rcross; simpl. ring. Qed.
+
+(* For unit X, unit Y, with Y on n's great circle (n.Y = 0):
+   ||n||^2 (X.Y)^2 + (n.X)^2 <= ||n||^2  (Cauchy-Schwarz via the Gram det). *)
+Lemma dot_circle_bound : forall n X Y,
+  Rdot X X = 1 -> Rdot Y Y = 1 -> Rdot n Y = 0 ->
+  Rnorm2 n * ((Rdot X Y)*(Rdot X Y)) + (Rdot n X)*(Rdot n X) <= Rnorm2 n.
+Proof.
+  intros n X Y HX HY HnY.
+  pose proof (gram_triple_sq n X Y) as G.
+  assert (Hsq : 0 <= Rdot n (Rcross X Y) * Rdot n (Rcross X Y)) by nra.
+  rewrite HX, HY, HnY in G. nra.
+Qed.
+
+(* ----- arccos / arcsin plumbing ----- *)
+Lemma acos_antitone : forall x y,
+  -1 <= x <= 1 -> -1 <= y <= 1 -> x <= y -> acos y <= acos x.
+Proof.
+  intros x y Hx Hy Hxy. destruct (Req_dec x y) as [->|Hneq]; [lra|].
+  assert (Hlt : x < y) by lra.
+  pose proof (acos_bound x) as [Hxlo Hxhi]. pose proof (acos_bound y) as [Hylo Hyhi].
+  destruct (Rle_or_lt (acos y) (acos x)) as [Hok|Hbad]; [exact Hok|exfalso].
+  assert (Hc : cos (acos y) < cos (acos x)) by (apply cos_decreasing_1; lra).
+  rewrite cos_acos in Hc by lra. rewrite cos_acos in Hc by lra. lra.
+Qed.
+
+Lemma asin_nonneg : forall s, 0 <= s -> s <= 1 -> 0 <= asin s.
+Proof.
+  intros s H0 H1. destruct (Rle_lt_dec 0 (asin s)) as [Hge|Hlt]; [exact Hge|exfalso].
+  pose proof (asin_bound s) as [Hlo Hhi].
+  assert (Hsin : sin (asin s) = s) by (apply sin_asin; lra).
+  assert (Hneg : sin (asin s) < 0) by (apply sin_lt_0_var; lra).
+  lra.
+Qed.
+
+Lemma asin_ge_self : forall s, 0 <= s -> s <= 1 -> s <= asin s.
+Proof.
+  intros s H0 H1. destruct (Req_dec s 0) as [->|Hn]; [rewrite asin_0; lra|].
+  assert (Hsin : sin (asin s) = s) by (apply sin_asin; lra).
+  assert (Hpos : 0 < asin s).
+  { pose proof (asin_nonneg s H0 H1) as Hnn. destruct (Req_dec (asin s) 0) as [Hz|Hnz].
+    - rewrite Hz, sin_0 in Hsin. lra.
+    - lra. }
+  pose proof (sin_lt_x (asin s) Hpos) as Hlt. rewrite Hsin in Hlt. lra.
+Qed.
+
+Lemma acos_sqrt_1ss : forall s, 0 <= s -> s <= 1 -> acos (sqrt (1 - s*s)) = asin s.
+Proof.
+  intros s H0 H1.
+  replace (1 - s*s) with (1 - Rsqr s) by (unfold Rsqr; ring).
+  rewrite <- (cos_asin s) by lra.
+  apply acos_cos. split; [apply asin_nonneg; lra | pose proof (asin_bound s); lra].
+Qed.
+
+(* Core: any unit Y on segment normal n's great circle is at least asin(s)
+   radians from a unit X whose normalized clearance is at least s. *)
+Lemma arc_ge_asin : forall n X Y s,
+  Rdot X X = 1 -> Rdot Y Y = 1 -> Rdot n Y = 0 -> 0 < Rnorm2 n ->
+  0 <= s -> s <= 1 -> s*s*Rnorm2 n <= (Rdot n X)*(Rdot n X) ->
+  asin s <= acos (Rdot X Y).
+Proof.
+  intros n X Y s HX HY HnY Hn Hs0 Hs1 Hclb.
+  pose proof (dot_circle_bound n X Y HX HY HnY) as Hb.
+  assert (Hxy2 : (Rdot X Y)*(Rdot X Y) <= 1 - s*s).
+  { apply Rmult_le_reg_l with (Rnorm2 n); [exact Hn|]. nra. }
+  assert (Hxy_bd : -1 <= Rdot X Y <= 1).
+  { assert (Hle1 : (Rdot X Y)*(Rdot X Y) <= 1) by nra. split; nra. }
+  assert (Hxy_ub : Rdot X Y <= sqrt (1 - s*s)).
+  { apply Rle_trans with (Rabs (Rdot X Y)); [apply Rle_abs|].
+    rewrite <- sqrt_Rsqr_abs. apply sqrt_le_1_alt. unfold Rsqr. exact Hxy2. }
+  assert (Hsqrt_bd : -1 <= sqrt (1 - s*s) <= 1).
+  { split.
+    - apply Rle_trans with 0; [lra | apply sqrt_pos].
+    - apply Rle_trans with (sqrt 1); [apply sqrt_le_1_alt; nra | rewrite sqrt_1; lra]. }
+  rewrite <- (acos_sqrt_1ss s Hs0 Hs1).
+  apply acos_antitone; [exact Hxy_bd | exact Hsqrt_bd | exact Hxy_ub].
+Qed.
+
+(* ----- Surface-distance clearance: every point of a segment's great circle is
+   at least R_earth_km * (clearance / |n|) kilometres from the position. ----- *)
+Definition R_earth_km : R := 6371.
+
+Theorem boundary_far_from_position : forall (n X Y : RVec) (s : R),
+  Rdot X X = 1 -> Rdot Y Y = 1 -> Rdot n Y = 0 -> 0 < Rnorm2 n ->
+  0 <= s -> s <= 1 -> s*s*Rnorm2 n <= (Rdot n X)*(Rdot n X) ->
+  R_earth_km * s <= R_earth_km * acos (Rdot X Y).
+Proof.
+  intros n X Y s HX HY HnY Hn Hs0 Hs1 Hclb.
+  apply Rmult_le_compat_l; [unfold R_earth_km; lra|].
+  apply Rle_trans with (asin s).
+  - apply asin_ge_self; assumption.
+  - apply (arc_ge_asin n X Y s); assumption.
+Qed.
+
+(* ----- Precise geometric meaning of a committed verdict (this is the honest
+   reading of the geofence: "decide X = Israeli" means exactly "X is in some
+   MBL longitude band and lies strictly on the positive (south) side of that
+   segment's great circle in real spherical geometry", NOT "X is in Israel's
+   waters"). ----- *)
+Theorem decide_Israeli_real_meaning : forall X,
+  decide X = Israeli ->
+  ( (in_band p2 p1 X = true /\ 0 < Rdot (RVof nseg1) (RVof X)) \/
+    (in_band p3 p2 X = true /\ 0 < Rdot (RVof nseg2) (RVof X)) \/
+    (in_band p4 p3 X = true /\ 0 < Rdot (RVof nseg3) (RVof X)) ).
+Proof.
+  intros X H. apply decide_Israeli_sound in H.
+  destruct H as [[Hb Hs]|[[Hb Hs]|[Hb Hs]]];
+    [left | right;left | right;right];
+    (split; [exact Hb |]; apply Qsign_pos_real in Hs; rewrite Q2R_dot in Hs; exact Hs).
+Qed.
+
+Theorem decide_Lebanese_real_meaning : forall X,
+  decide X = Lebanese ->
+  ( (in_band p2 p1 X = true /\ Rdot (RVof nseg1) (RVof X) < 0) \/
+    (in_band p3 p2 X = true /\ Rdot (RVof nseg2) (RVof X) < 0) \/
+    (in_band p4 p3 X = true /\ Rdot (RVof nseg3) (RVof X) < 0) ).
+Proof.
+  intros X H. apply decide_Lebanese_sound in H.
+  destruct H as [[Hb Hs]|[[Hb Hs]|[Hb Hs]]];
+    [left | right;left | right;right];
+    (split; [exact Hb |]; apply Qsign_neg_real in Hs; rewrite Q2R_dot in Hs; exact Hs).
+Qed.
+
+(* ----- A worked metric corollary: the agreed boundary lies at least
+   R_earth_km * karish_s ~ 13.7 km from the Karish field's true unit position
+   (Wolfram cross-check in derive.wl: 14.18 km).  karish_s is a rational lower
+   bound on clearance(Karish)/|nseg3|, karish_clear_lb on the Karish side
+   determinant. ----- *)
+Definition ub3 : Q := 175 # 10000.
+Definition karish_clear_lb : Q := 38 # 1000000.
+Definition karish_s : Q := 216 # 100000.
+
+Lemma Q2R_nonneg : forall q, (0 <= q)%Q -> 0 <= Q2R q.
+Proof. intros q H. pose proof (Qle_Rle 0 q H) as HR. rewrite RMicromega.Q2R_0 in HR. exact HR. Qed.
+
+Lemma Q2R_le_1 : forall q, (q <= 1)%Q -> Q2R q <= 1.
+Proof.
+  intros q H. apply Rle_trans with (Q2R 1); [apply Qle_Rle; exact H|].
+  rewrite RMicromega.Q2R_1. apply Rle_refl.
+Qed.
+
+Lemma Rnorm2_nseg3_le : Rnorm2 (RVof nseg3) <= Q2R ub3 * Q2R ub3.
+Proof.
+  rewrite Rnorm2_RVof, <- Q2R_mult. apply Qle_Rle.
+  unfold ub3. apply Qle_bool_iff. vm_compute. reflexivity.
+Qed.
+
+Lemma Rnorm2_nseg3_pos : 0 < Rnorm2 (RVof nseg3).
+Proof. rewrite Rnorm2_RVof. apply Qsign_pos_real. vm_compute. reflexivity. Qed.
+
+Lemma karish_clear_ge : Q2R karish_clear_lb <= Rdot (RVof nseg3) (RVof karish).
+Proof.
+  rewrite <- Q2R_dot. apply Qle_Rle. unfold karish_clear_lb.
+  apply Qle_bool_iff. vm_compute. reflexivity.
+Qed.
+
+Theorem karish_min_distance_km : forall X Y,
+  Rdot X X = 1 -> Rdot Y Y = 1 -> Rdot (RVof nseg3) Y = 0 ->
+  Q2R karish_clear_lb <= Rdot (RVof nseg3) X ->
+  R_earth_km * Q2R karish_s <= R_earth_km * acos (Rdot X Y).
+Proof.
+  intros X Y HX HY HnY Hclb.
+  apply (boundary_far_from_position (RVof nseg3) X Y (Q2R karish_s) HX HY HnY).
+  - exact Rnorm2_nseg3_pos.
+  - apply Q2R_nonneg. unfold karish_s. apply Qle_bool_iff. vm_compute. reflexivity.
+  - apply Q2R_le_1. unfold karish_s. apply Qle_bool_iff. vm_compute. reflexivity.
+  - assert (Hkey : Q2R karish_s * Q2R karish_s * (Q2R ub3 * Q2R ub3)
+                   <= Q2R karish_clear_lb * Q2R karish_clear_lb).
+    { rewrite <- !Q2R_mult. apply Qle_Rle. apply Qle_bool_iff. vm_compute. reflexivity. }
+    pose proof Rnorm2_nseg3_le as HN.
+    assert (Hs0 : 0 <= Q2R karish_s) by
+      (apply Q2R_nonneg; unfold karish_s; apply Qle_bool_iff; vm_compute; reflexivity).
+    assert (Hclb0 : 0 <= Q2R karish_clear_lb) by
+      (apply Q2R_nonneg; unfold karish_clear_lb; apply Qle_bool_iff; vm_compute; reflexivity).
+    nra.
+Qed.
+
+End Bridge.

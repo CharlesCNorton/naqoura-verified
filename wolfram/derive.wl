@@ -116,3 +116,32 @@ Print[N[{rats["point1_israel"][[3]], rats["cyprus2"][[3]], rats["cyprus3"][[3]],
          rats["cyprus4"][[3]], rats["cyprus5"][[3]], rats["cyprus6"][[3]]}, 8]];
 Print["\n(existing p1..p4, karish unchanged; verify they match:)"];
 Do[Print[vecdef[k, rats[k]]], {k, {"p1","p2","p3","p4","karish"}}];
+
+(* ---- WGS84 ellipsoid model-error cross-check.  For each committed feature,
+   compare the spherical side determinant (used by the Coq kernel) to the full
+   WGS84-ellipsoidal one.  The sign must match (the model never flips a verdict)
+   and the maximum |difference| is the model_det_budget that
+   committed_robust_to_model_and_rounding must exceed (1e-7 in Coq). ---- *)
+e2 = 0.0066943799901413165;
+ue[{phi_, lam_}] := Module[{nn, v},
+  nn = 1/Sqrt[1 - e2 Sin[phi Degree]^2];
+  v = {nn Cos[phi Degree] Cos[lam Degree], nn Cos[phi Degree] Sin[lam Degree],
+       nn (1 - e2) Sin[phi Degree]};
+  v/Norm[v]];
+segOf = <|"point1_israel" -> 3, "karish" -> 3, "karish_north" -> 3, "tanin" -> 3,
+          "qana_leb" -> 2, "qana_isr" -> 2, "b1n" -> 1, "b1s" -> 1|>;
+segEnds = {{"p1", "p2"}, {"p2", "p3"}, {"p3", "p4"}};
+Print["\n=== spherical vs WGS84-ellipsoid side determinant (committed features) ==="];
+modelMax = 0;
+Do[Module[{i = segOf[f], A, B, dS, dE, km},
+   A = segEnds[[i, 1]]; B = segEnds[[i, 2]];
+   dS = Cross[u[pts[A]], u[pts[B]]] . u[pts[f]];
+   dE = Cross[ue[pts[A]], ue[pts[B]]] . ue[pts[f]];
+   km = Rkm QuantityMagnitude[ArcSin[Abs[dS]/Norm[Cross[u[pts[A]], u[pts[B]]]]]];
+   modelMax = Max[modelMax, Abs[dS - dE]];
+   Print[StringPadRight[f, 14], " seg=", i, "  |detS|=", ScientificForm[N[Abs[dS], 4], 4],
+         "  km=", PaddedForm[N[km, 5], {6, 2}], "  signOK=", Sign[dS] == Sign[dE],
+         "  |dS-dE|=", ScientificForm[N[Abs[dS - dE], 3], 3]]],
+  {f, Keys[segOf]}];
+Print["max |detS - detE| (Coq model_det_budget = 1e-7 must exceed this): ",
+  ScientificForm[N[modelMax, 4], 4]];
