@@ -210,8 +210,11 @@ Coordinate provenance (classical reals plus primitive integers):
 
 The rational kernel contains no axioms and no admitted lemmas. `audit.v` runs
 `Print Assumptions` over the kernel theorems; each reports *Closed under the
-global context*. The geofence and clearance extract to runnable OCaml, and
-`selftest.ml` checks that the extracted verdicts match the Coq theorems.
+global context*. The geofence and clearance extract to runnable OCaml;
+`selftest.ml` checks that the extracted verdicts match the Coq theorems, and
+`difftest.ml` / `difftest.py` cross-check the extracted decision against an
+independent reimplementation of the kernel over 50000 pseudo-random positions
+plus structured edge cases, all on identical exact rationals.
 
 The real-geometry bridge depends only on Coq's standard real-number axioms
 (`ClassicalDedekindReals.sig_forall_dec`, `sig_not_dec`, `functional_
@@ -272,6 +275,7 @@ coqc audit.v               # axiom audit of the rational kernel (all closed)
 coqc audit_bridge.v        # axiom footprint of the real-geometry bridge
 coqc audit_provenance.v    # axiom footprint of the provenance layer
 bash build.sh              # all of the above, plus the OCaml self-test
+bash difftest.sh [N]       # differential test vs an independent oracle (N points)
 ```
 
 `wolfram/derive.wl` (WolframScript) re-derives every rational constant from its
@@ -287,6 +291,9 @@ audit.v            Print Assumptions over the rational kernel (all closed)
 audit_bridge.v     Print Assumptions over the real-geometry bridge
 audit_provenance.v Print Assumptions over the provenance layer
 selftest.ml        OCaml harness checking extracted verdicts vs the theorems
+difftest.ml        OCaml runner: extracted verdicts for positions read on stdin
+difftest.py        independent oracle + differential test driver
+difftest.sh        build the runner and run the differential test
 build.sh           compile, audit, extract, build, self-test
 wolfram/derive.wl  coordinate provenance, geodesic and ellipsoidal cross-checks
 ```

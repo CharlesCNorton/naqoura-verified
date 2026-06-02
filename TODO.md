@@ -1,5 +1,4 @@
-1. Line 29 was never deposited: the April 2021 draft decree amending Decree 6433 was approved by a caretaker government but left unsigned, so no primary coordinate list for it exists (only the UKHO-endorsed army study). line29_anchor := karish is retained as a faithful anchor for the rejected claim, since Line 29 was drawn to bring the Karish field onto Lebanon's side and the agreed Line 23 leaves it Israeli.
-2. Replace the representative Qana points with sourced Block 9 / Block 72 / 31-1B coordinates; the well was a dry hole and its location was not published.
-3. The UNCLOS Article 74/83 equidistance geometry is now formalized (equidistant_is_bisector, nearer_is_halfspace, equidistance_trichotomy, and Bridge.equidistant_real_meaning). A basepoint-level comparison of the agreed line against a constructed equidistance line still needs the parties' coastal low-water basepoints, which are not published as machine-readable coordinates; the agreed line is in any case a negotiated equitable settlement (Section 1E), not a strict equidistance line, so such a comparison would characterize its departure from equidistance rather than confirm it.
-4. Reduce extraction trust further; the self-test now covers fourteen theorem-backed points, but Coq's extraction itself is unverified, so a verified extraction toolchain (CertiCoq / MetaCoq) would be needed to close the gap fully (external infrastructure).
-5. Reduce the bridge's reliance on classical reals; its geometric theorems use excluded middle, functional extensionality, and the Dedekind-reals axioms, which the metric layer fundamentally requires.
+1. Replace line29_anchor := karish with Line 29's actual endpoint coordinates.
+2. Replace the representative Qana points with sourced Block 9 / 31-1B coordinates.
+3. Compare the agreed line against a constructed equidistance line from actual coastal basepoints.
+4. Reduce the bridge's classical-reals axiom footprint.
